@@ -35,7 +35,8 @@ export type SpecialMechanic = (typeof SPECIAL_MECHANICS)[number]
 export type RuntimeProfile = (typeof RUNTIME_PROFILES)[number]
 export type SupportLevel = (typeof SUPPORT_LEVELS)[number]
 
-export type GenerationSource = 'openai' | 'fallback'
+export type GenerationSource = 'ai' | 'fallback'
+export type GenerationProviderKind = 'openai-compatible' | 'ollama' | 'fallback'
 
 export const CAMERA_LABELS: Record<CameraMode, string> = {
   'top-down': 'Top Down',
@@ -167,6 +168,8 @@ export interface GameBlueprint {
 export interface GenerationResult {
   blueprint: GameBlueprint
   generationSource: GenerationSource
+  providerKind: GenerationProviderKind
+  providerLabel: string
   warnings: string[]
   createdAt: string
 }

@@ -5,7 +5,7 @@ import express from 'express'
 import multer from 'multer'
 
 import { buildFallbackBlueprint } from './blueprint'
-import { generateBlueprintWithOpenAI, hasOpenAIConfig } from './openai'
+import { collectAIInputWarnings, generateBlueprintWithAI, hasAIConfig, resolveAIProvider } from './openai'
 import { persistRun } from './storage'
 import type { GenerationResult, StoredGeneration } from '../shared/game'
 
@@ -25,9 +25,15 @@ const upload = multer({
 app.use(express.json())
 
 app.get('/api/health', (_request, response) => {
+  const provider = resolveAIProvider()
   response.json({
     ok: true,
-    openaiConfigured: hasOpenAIConfig(),
+    aiConfigured: hasAIConfig(),
+    provider: {
+      kind: provider.kind,
+      label: provider.label,
+      model: provider.model ?? null,
+    },
   })
 })
 
@@ -53,27 +59,49 @@ app.post('/api/generate', upload.array('files', 12), async (request, response) =
       base64Data: file.buffer.toString('base64'),
     }))
 
-    const generationSource = hasOpenAIConfig() ? 'openai' : 'fallback'
+    const configuredProvider = resolveAIProvider()
     const warnings: string[] = []
+    warnings.push(...collectAIInputWarnings(images))
+    let generationSource: GenerationResult['generationSource'] = 'fallback'
+    let providerKind: GenerationResult['providerKind'] = 'fallback'
+    let providerLabel = 'Fallback'
+
+    const buildLocalFallback = () =>
+      buildFallbackBlueprint(
+        notes,
+        images.map((image) => image.name),
+        images.length,
+      )
 
     const blueprint =
-      generationSource === 'openai'
-        ? await generateBlueprintWithOpenAI(notes, images)
-        : buildFallbackBlueprint(
-            notes,
-            images.map((image) => image.name),
-            images.length,
-          )
+      configuredProvider.kind === 'fallback'
+        ? buildLocalFallback()
+        : await generateBlueprintWithAI(notes, images)
+            .then((value) => {
+              generationSource = 'ai'
+              providerKind = configuredProvider.kind
+              providerLabel = configuredProvider.label
+              return value
+            })
+            .catch((error) => {
+              const message = error instanceof Error ? error.message : 'Unknown AI error.'
+              warnings.push(
+                `${configuredProvider.label} no respondió bien. Se usó el fallback local. Detalle: ${message}`,
+              )
+              return buildLocalFallback()
+            })
 
-    if (generationSource === 'fallback') {
+    if (configuredProvider.kind === 'fallback') {
       warnings.push(
-        'OPENAI_API_KEY no está configurada. Se generó un prototipo local de demostración sin análisis multimodal real.',
+        'No hay proveedor AI configurado. Gameclaw cayó en el blueprint local de demostración sin análisis multimodal real.',
       )
     }
 
     const result: GenerationResult = {
       blueprint,
       generationSource,
+      providerKind,
+      providerLabel,
       warnings,
       createdAt: new Date().toISOString(),
     }

@@ -13,7 +13,7 @@ The important change is architectural: Gameclaw no longer depends on three fixed
 
 1. Upload multiple visual references.
 2. Add optional notes about genre, controls, tone, or mechanics.
-3. The backend analyzes the images with the OpenAI Responses API.
+3. The backend analyzes the images with a multimodal AI backend.
 4. The app emits a structured blueprint with:
    - `systems`
    - `physics`
@@ -72,7 +72,7 @@ That is the path for ideas like `Angry Birds`: use a real physics runtime, not f
 
 - React + Vite for the UI
 - Express for uploads and orchestration
-- OpenAI Responses API for multimodal analysis and structured output
+- Ollama or OpenAI-compatible backends for multimodal analysis and structured output
 - Phaser 3 for the playable prototype runtime
 - Phaser Matter for rigid-body destruction prototypes
 
@@ -83,14 +83,7 @@ npm install
 cp .env.example .env
 ```
 
-Optional but recommended:
-
-```bash
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5.4-mini
-```
-
-Then run:
+Run:
 
 ```bash
 npm run dev
@@ -99,7 +92,45 @@ npm run dev
 Frontend: [http://localhost:5173](http://localhost:5173)  
 Backend: [http://localhost:3001](http://localhost:3001)
 
-If `OPENAI_API_KEY` is missing, Gameclaw still runs in a local fallback mode so the repo remains demoable.
+## AI Backends
+
+Gameclaw no longer depends on OpenAI specifically. It supports:
+
+- `ollama` for local models on this Mac or another machine
+- `lmstudio` for a Mac mini running LM Studio
+- generic `openai-compatible` endpoints
+- the old `OPENAI_*` env vars as a legacy compatibility path
+
+If you do not configure anything, Gameclaw tries local Ollama first through `http://127.0.0.1:11434` with `gemma3:4b`. If that fails, it falls back to the built-in demo blueprint mode so the repo still works.
+
+### Ollama Example
+
+```bash
+AI_PROVIDER=ollama
+AI_BASE_URL=http://127.0.0.1:11434
+AI_MODEL=gemma3:4b
+AI_PROVIDER_LABEL=MacBook Ollama
+```
+
+### LM Studio Example
+
+```bash
+AI_PROVIDER=lmstudio
+AI_BASE_URL=http://192.168.1.50:1234/v1
+AI_MODEL=qwen2.5-vl-7b-instruct
+AI_API_KEY=lm-studio
+AI_PROVIDER_LABEL=Mac mini LM Studio
+```
+
+### Legacy OpenAI-Compatible Example
+
+```bash
+OPENAI_API_KEY=your_key_here
+OPENAI_MODEL=gpt-5.4-mini
+OPENAI_BASE_URL=
+```
+
+Use `/api/health` to confirm which backend is active.
 
 ## Build
 
@@ -109,15 +140,8 @@ npm run build
 npm run start
 ```
 
-## OpenAI Notes
+## Notes
 
-This repo uses the current OpenAI `Responses` API shape for:
-
-- image input via `input_image`
-- structured output via `text.format` with `json_schema`
-
-Relevant docs:
-
-- [Images and vision](https://developers.openai.com/api/docs/guides/images-vision)
-- [Migrate to Responses](https://developers.openai.com/api/docs/guides/migrate-to-responses)
-- [GPT-5.4 mini model page](https://developers.openai.com/api/docs/models/gpt-5.4-mini/)
+- `lmstudio` uses the OpenAI-compatible `Responses` shape, so it works well for multimodal structured output.
+- `ollama` uses `/api/chat` with image attachments and a JSON schema response format.
+- If the configured AI backend fails at runtime, the server falls back to the local demo blueprint and adds a warning to the response instead of crashing the prototype flow.

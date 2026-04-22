@@ -227,8 +227,8 @@ export default function App() {
               {busy ? 'Generando vertical slice...' : 'Generar videojuego'}
             </button>
             <p className="microcopy">
-              Si no configuras `OPENAI_API_KEY`, la app cae en modo fallback y sigue generando un
-              slice local usando inferencia por texto.
+              Gameclaw puede usar `Ollama` local o un backend `OpenAI-compatible` como `LM Studio`.
+              Si ninguno responde, cae en fallback y sigue generando un slice local.
             </p>
           </div>
 
@@ -243,7 +243,7 @@ export default function App() {
             </div>
             {result ? (
               <span className={`hint-chip ${result.generationSource}`}>
-                {result.generationSource === 'openai' ? 'OpenAI' : 'Fallback'}
+                {result.generationSource === 'ai' ? result.providerLabel : 'Fallback'}
               </span>
             ) : null}
           </div>
