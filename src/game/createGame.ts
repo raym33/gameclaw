@@ -3,6 +3,7 @@ import astralBackgroundUrl from '../assets/astral-orchard/background-concept.png
 import astralBrassBeamUrl from '../assets/astral-orchard/brass-beam.png'
 import astralGlassPillarUrl from '../assets/astral-orchard/glass-pillar.png'
 import astralOrbitCoreUrl from '../assets/astral-orchard/orbit-core.png'
+import astralOriginalSpriteSheetUrl from '../assets/astral-orchard/original-sprite-sheet.png'
 import astralStarSeedUrl from '../assets/astral-orchard/star-seed.png'
 import astralWoodBeamUrl from '../assets/astral-orchard/wood-beam.png'
 import astralWoodSupportUrl from '../assets/astral-orchard/wood-support.png'
@@ -48,6 +49,7 @@ type MatterShape = ShapeObject & {
 
 const ASTRAL_TEXTURES = {
   background: 'astral-bg',
+  spriteSheet: 'astral-original-sprite-sheet',
   projectile: 'astral-projectile',
   target: 'astral-target',
   woodBeam: 'astral-wood-beam',
@@ -64,6 +66,36 @@ const ASTRAL_CUTOUT_TEXTURES = {
   glassPillar: 'astral-glass-pillar-cutout',
   brassBeam: 'astral-brass-beam-cutout',
 } as const
+
+const ASTRAL_HERO_SPRITES = {
+  idle: 'astral-hero-sprite-idle',
+  walk: 'astral-hero-sprite-walk',
+  pull: 'astral-hero-sprite-pull',
+  release: 'astral-hero-sprite-release',
+} as const
+
+type AstralHeroPose = keyof typeof ASTRAL_HERO_SPRITES
+
+const ASTRAL_HERO_SOURCE_RECTS: Record<AstralHeroPose, TextureCrop> = {
+  idle: { x: 54, y: 86, width: 242, height: 346 },
+  walk: { x: 362, y: 106, width: 220, height: 336 },
+  pull: { x: 842, y: 146, width: 302, height: 286 },
+  release: { x: 1138, y: 150, width: 350, height: 282 },
+}
+
+const ASTRAL_HERO_DISPLAY: Record<AstralHeroPose, { width: number; height: number; originX: number }> = {
+  idle: { width: 94, height: 134, originX: 0.5 },
+  walk: { width: 90, height: 132, originX: 0.48 },
+  pull: { width: 168, height: 126, originX: 0.34 },
+  release: { width: 196, height: 124, originX: 0.34 },
+}
+
+type TextureCrop = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
 type SlingshotMaterial = 'wood' | 'glass' | 'brass'
 
@@ -103,21 +135,6 @@ type SlingshotLevel = {
   targets: SlingshotTargetDefinition[]
 }
 
-type SlingshotHeroRig = {
-  container: Phaser.GameObjects.Container
-  backArm: Phaser.GameObjects.Graphics
-  frontArm: Phaser.GameObjects.Graphics
-  backLeg: Phaser.GameObjects.Graphics
-  frontLeg: Phaser.GameObjects.Graphics
-  hat: Phaser.GameObjects.Graphics
-  body: Phaser.GameObjects.Ellipse
-  scarf: Phaser.GameObjects.Triangle
-  head: Phaser.GameObjects.Ellipse
-  eye: Phaser.GameObjects.Ellipse
-  backHand: Phaser.GameObjects.Ellipse
-  frontHand: Phaser.GameObjects.Ellipse
-}
-
 type SlingshotState = {
   anchor: { x: number; y: number }
   dragGuide: Phaser.GameObjects.Graphics
@@ -133,7 +150,8 @@ type SlingshotState = {
   transitioning: boolean
   levelBadge: Phaser.GameObjects.Text
   controlHint: Phaser.GameObjects.Text
-  heroRig?: SlingshotHeroRig
+  heroSprite?: Phaser.GameObjects.Image
+  heroPose: AstralHeroPose
   heroBase: { x: number; y: number }
   elasticSnap: { startedAt: number; pullX: number; pullY: number } | null
 }
@@ -272,6 +290,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.load.image(ASTRAL_TEXTURES.background, astralBackgroundUrl)
+    this.load.image(ASTRAL_TEXTURES.spriteSheet, astralOriginalSpriteSheetUrl)
     this.load.image(ASTRAL_TEXTURES.projectile, astralStarSeedUrl)
     this.load.image(ASTRAL_TEXTURES.target, astralOrbitCoreUrl)
     this.load.image(ASTRAL_TEXTURES.woodBeam, astralWoodBeamUrl)
@@ -709,6 +728,7 @@ class GeneratedGameScene extends Phaser.Scene {
       levels: SLINGSHOT_LEVELS,
       transitioning: false,
       heroBase: { x: 156, y: GAME_HEIGHT - 70 },
+      heroPose: 'idle',
       elasticSnap: null,
       levelBadge: this.add
         .text(GAME_WIDTH - 28, 24, '', {
@@ -739,7 +759,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.matter.add.gameObject(launcher, { isStatic: true })
 
     this.drawSlingshotFrame()
-    this.slingshot.heroRig = this.createSlingshotHeroRig(this.slingshot.heroBase.x, this.slingshot.heroBase.y)
+    this.slingshot.heroSprite = this.createSlingshotHeroSprite(this.slingshot.heroBase.x, this.slingshot.heroBase.y)
 
     this.loadSlingshotLevel(0)
     this.refreshDragGuide()
@@ -1492,125 +1512,45 @@ class GeneratedGameScene extends Phaser.Scene {
     frame.fillCircle(x + 26, y - 34, 5)
   }
 
-  private createSlingshotHeroRig(x: number, y: number): SlingshotHeroRig {
-    const container = this.add.container(x, y).setDepth(8)
-    const backLeg = this.add.graphics()
-    const backArm = this.add.graphics()
-    const body = this.add.ellipse(0, -45, 36, 58, parseColor('#31514a'), 0.98)
-    body.setStrokeStyle(3, parseColor('#d6c78b'), 0.7)
-    const scarf = this.add.triangle(10, -55, 0, 0, 30, 4, 8, 16, parseColor(this.blueprint.palette.accent), 0.95)
-    const frontLeg = this.add.graphics()
-    const frontArm = this.add.graphics()
-    const head = this.add.ellipse(3, -82, 26, 28, parseColor('#e8dfc5'), 0.98)
-    head.setStrokeStyle(2, parseColor('#1b2526'), 0.9)
-    const eye = this.add.ellipse(9, -84, 7, 10, parseColor('#122325'), 1)
-    const hat = this.add.graphics()
-    const backHand = this.add.ellipse(23, -58, 8, 8, parseColor('#eadca9'), 1)
-    const frontHand = this.add.ellipse(30, -60, 9, 9, parseColor('#f2e2ae'), 1)
-
-    container.add([backLeg, backArm, body, scarf, frontLeg, frontArm, head, eye, hat, backHand, frontHand])
-    this.drawSlingshotHeroRig({ container, backArm, frontArm, backLeg, frontLeg, hat, body, scarf, head, eye, backHand, frontHand }, 0, 'idle')
-
-    return { container, backArm, frontArm, backLeg, frontLeg, hat, body, scarf, head, eye, backHand, frontHand }
+  private createSlingshotHeroSprite(x: number, y: number): Phaser.GameObjects.Image {
+    const hero = this.add.image(x, y, ASTRAL_HERO_SPRITES.idle).setDepth(8).setAlpha(0.98)
+    this.applyHeroSpritePose(hero, 'idle')
+    return hero
   }
 
-  private drawSlingshotHeroRig(
-    rig: SlingshotHeroRig,
-    pullAmount: number,
-    mode: 'idle' | 'pull',
-    heldHand?: { x: number; y: number },
-  ): void {
-    const skin = parseColor('#eadca9')
-    const sleeve = parseColor('#83d8cf')
-    const boot = parseColor('#182827')
-    const cloak = parseColor('#31514a')
-    const accent = parseColor(this.blueprint.palette.accent)
-    const time = this.time.now
-    const idleBob = mode === 'idle' ? Math.sin(time * 0.006) * 1.3 : 0
-    const step = Math.sin(time * 0.018) * pullAmount
-    const hand = heldHand ?? { x: 30, y: -61 + idleBob }
-    const backHand = mode === 'pull' ? { x: hand.x + 7, y: hand.y + 5 } : { x: 22, y: -58 + idleBob }
-    const shoulder = { x: 8 - pullAmount * 3, y: -64 + idleBob }
-    const backShoulder = { x: -8 - pullAmount * 2, y: -63 + idleBob }
-    const hipFront = { x: 8, y: -24 + idleBob }
-    const hipBack = { x: -8, y: -24 + idleBob }
-    const frontFoot = { x: 10 - pullAmount * 18 + step * 7, y: -1 }
-    const backFoot = { x: -12 + pullAmount * 10 - step * 5, y: -1 }
+  private applyHeroSpritePose(hero: Phaser.GameObjects.Image, pose: AstralHeroPose): void {
+    const display = ASTRAL_HERO_DISPLAY[pose]
+    hero
+      .setTexture(ASTRAL_HERO_SPRITES[pose])
+      .setOrigin(display.originX, 1)
+      .setDisplaySize(display.width, display.height)
 
-    rig.body.setPosition(-pullAmount * 3, -45 + idleBob)
-    rig.body.setScale(1 - pullAmount * 0.04, 1 + pullAmount * 0.05)
-    rig.head.setPosition(3 - pullAmount * 6, -82 + idleBob)
-    rig.eye.setPosition(9 - pullAmount * 6, -84 + idleBob)
-    rig.scarf.setPosition(10 - pullAmount * 3, -55 + idleBob)
-
-    rig.frontHand.setPosition(hand.x, hand.y)
-    rig.backHand.setPosition(backHand.x, backHand.y)
-
-    rig.hat.clear()
-    rig.hat.fillStyle(parseColor('#a89251'), 0.98)
-    rig.hat.fillTriangle(-30 - pullAmount * 4, -92 + idleBob, 32 - pullAmount * 4, -96 + idleBob, -2 - pullAmount * 7, -126 + idleBob)
-    rig.hat.lineStyle(2, parseColor('#2d2718'), 0.7)
-    rig.hat.strokeTriangle(-30 - pullAmount * 4, -92 + idleBob, 32 - pullAmount * 4, -96 + idleBob, -2 - pullAmount * 7, -126 + idleBob)
-    rig.hat.fillStyle(accent, 0.85)
-    rig.hat.fillCircle(-2 - pullAmount * 7, -113 + idleBob, 3)
-
-    rig.backLeg.clear()
-    rig.backLeg.lineStyle(8, boot, 0.94)
-    rig.backLeg.lineBetween(hipBack.x, hipBack.y, backFoot.x, backFoot.y)
-    rig.backLeg.lineStyle(4, accent, 0.38)
-    rig.backLeg.lineBetween(hipBack.x + 1, hipBack.y + 5, backFoot.x, backFoot.y)
-
-    rig.frontLeg.clear()
-    rig.frontLeg.lineStyle(8, boot, 0.98)
-    rig.frontLeg.lineBetween(hipFront.x, hipFront.y, frontFoot.x, frontFoot.y)
-    rig.frontLeg.lineStyle(4, accent, 0.44)
-    rig.frontLeg.lineBetween(hipFront.x - 1, hipFront.y + 5, frontFoot.x, frontFoot.y)
-
-    this.drawBentArm(rig.backArm, backShoulder, backHand, sleeve, skin, pullAmount, -1)
-    this.drawBentArm(rig.frontArm, shoulder, hand, sleeve, skin, pullAmount, 1)
-
-    rig.backHand.setFillStyle(skin, 1)
-    rig.frontHand.setFillStyle(skin, 1)
-    rig.body.setFillStyle(cloak, 0.98)
-  }
-
-  private drawBentArm(
-    graphics: Phaser.GameObjects.Graphics,
-    shoulder: { x: number; y: number },
-    hand: { x: number; y: number },
-    sleeve: number,
-    skin: number,
-    pullAmount: number,
-    side: number,
-  ): void {
-    const elbow = {
-      x: Phaser.Math.Linear(shoulder.x, hand.x, 0.48) + side * (8 + pullAmount * 8),
-      y: Phaser.Math.Linear(shoulder.y, hand.y, 0.48) + 7 - pullAmount * 9,
+    if (this.slingshot) {
+      this.slingshot.heroPose = pose
     }
-
-    graphics.clear()
-    graphics.lineStyle(8, sleeve, 0.95)
-    graphics.lineBetween(shoulder.x, shoulder.y, elbow.x, elbow.y)
-    graphics.lineBetween(elbow.x, elbow.y, hand.x, hand.y)
-    graphics.lineStyle(4, skin, 0.92)
-    graphics.lineBetween(elbow.x, elbow.y, hand.x, hand.y)
   }
 
   private getHeroHandPosition(): { x: number; y: number } | null {
-    const rig = this.slingshot?.heroRig
-    if (!rig) {
+    const hero = this.slingshot?.heroSprite
+    if (!hero || !this.slingshot) {
       return null
     }
 
-    const localX = rig.frontHand.x
-    const localY = rig.frontHand.y
-    const rotation = rig.container.rotation
+    const pose = this.slingshot.heroPose
+    const offsets: Record<AstralHeroPose, { x: number; y: number }> = {
+      idle: { x: 22, y: -70 },
+      walk: { x: 30, y: -68 },
+      pull: { x: 48, y: -60 },
+      release: { x: 78, y: -64 },
+    }
+    const offset = offsets[pose]
+    const rotation = hero.rotation
     const cos = Math.cos(rotation)
     const sin = Math.sin(rotation)
 
     return {
-      x: rig.container.x + localX * cos - localY * sin,
-      y: rig.container.y + localX * sin + localY * cos,
+      x: hero.x + offset.x * cos - offset.y * sin,
+      y: hero.y + offset.x * sin + offset.y * cos,
     }
   }
 
@@ -1747,11 +1687,11 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private syncSlingshotHero(): void {
-    if (!this.slingshot?.heroRig) {
+    if (!this.slingshot?.heroSprite) {
       return
     }
 
-    const rig = this.slingshot.heroRig
+    const hero = this.slingshot.heroSprite
     const projectile = this.slingshot.projectile
     const recoilProgress =
       this.slingshot.elasticSnap && this.slingshot.projectileLaunched
@@ -1759,12 +1699,13 @@ class GeneratedGameScene extends Phaser.Scene {
         : 1
 
     if (!projectile || this.slingshot.projectileLaunched) {
-      rig.container.setPosition(
-        Phaser.Math.Linear(rig.container.x, this.slingshot.heroBase.x - (1 - recoilProgress) * 10, 0.2),
-        Phaser.Math.Linear(rig.container.y, this.slingshot.heroBase.y + Math.sin(this.time.now * 0.012) * 1.4, 0.2),
+      const pose: AstralHeroPose = recoilProgress < 0.78 ? 'release' : 'idle'
+      this.applyHeroSpritePose(hero, pose)
+      hero.setPosition(
+        Phaser.Math.Linear(hero.x, this.slingshot.heroBase.x - (1 - recoilProgress) * 14, 0.2),
+        Phaser.Math.Linear(hero.y, this.slingshot.heroBase.y + Math.sin(this.time.now * 0.012) * 1.4, 0.2),
       )
-      rig.container.setRotation(Phaser.Math.Linear(rig.container.rotation, 0, 0.2))
-      this.drawSlingshotHeroRig(rig, 0, 'idle')
+      hero.setRotation(Phaser.Math.Linear(hero.rotation, recoilProgress < 0.78 ? -0.08 : 0, 0.2))
       return
     }
 
@@ -1775,14 +1716,14 @@ class GeneratedGameScene extends Phaser.Scene {
       0,
       1,
     )
+    const walking = pullAmount > 0.08 && pullAmount < 0.48
+    const walkPhase = Math.floor(this.time.now / 130) % 2
+    const pose: AstralHeroPose = pullAmount > 0.48 ? 'pull' : walking && walkPhase === 0 ? 'walk' : 'idle'
     const walkBob = Math.sin(this.time.now * 0.02) * Math.min(5, Math.abs(pullOffsetX) * 0.16)
 
-    rig.container.setPosition(this.slingshot.heroBase.x + pullOffsetX, this.slingshot.heroBase.y + pullOffsetY + walkBob)
-    rig.container.setRotation(Phaser.Math.Clamp(pullOffsetX * 0.004, -0.16, 0.08))
-    this.drawSlingshotHeroRig(rig, pullAmount, 'pull', {
-      x: projectile.x - rig.container.x,
-      y: projectile.y - rig.container.y,
-    })
+    this.applyHeroSpritePose(hero, pose)
+    hero.setPosition(this.slingshot.heroBase.x + pullOffsetX, this.slingshot.heroBase.y + pullOffsetY + walkBob)
+    hero.setRotation(Phaser.Math.Clamp(pullOffsetX * 0.004, -0.13, 0.07))
   }
 
   private updateMatterTargets(): void {
@@ -1866,16 +1807,27 @@ class GeneratedGameScene extends Phaser.Scene {
     this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.woodSupport, ASTRAL_CUTOUT_TEXTURES.woodSupport)
     this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.glassPillar, ASTRAL_CUTOUT_TEXTURES.glassPillar)
     this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.brassBeam, ASTRAL_CUTOUT_TEXTURES.brassBeam)
+
+    for (const pose of Object.keys(ASTRAL_HERO_SPRITES) as AstralHeroPose[]) {
+      this.createEdgeKeyedCutoutTexture(
+        ASTRAL_TEXTURES.spriteSheet,
+        ASTRAL_HERO_SPRITES[pose],
+        ASTRAL_HERO_SOURCE_RECTS[pose],
+      )
+    }
   }
 
-  private createEdgeKeyedCutoutTexture(sourceKey: string, cutoutKey: string): void {
+  private createEdgeKeyedCutoutTexture(sourceKey: string, cutoutKey: string, crop?: TextureCrop): void {
     if (!this.textures.exists(sourceKey) || this.textures.exists(cutoutKey)) {
       return
     }
 
     const source = this.textures.get(sourceKey).getSourceImage() as CanvasImageSource
-    const width = Number('width' in source ? source.width : 0)
-    const height = Number('height' in source ? source.height : 0)
+    const sourceWidth = Number('width' in source ? source.width : 0)
+    const sourceHeight = Number('height' in source ? source.height : 0)
+    const sourceRect = crop ?? { x: 0, y: 0, width: sourceWidth, height: sourceHeight }
+    const width = sourceRect.width
+    const height = sourceRect.height
     const canvasTexture = this.textures.createCanvas(cutoutKey, width, height)
     if (!canvasTexture || width <= 0 || height <= 0) {
       return
@@ -1883,7 +1835,17 @@ class GeneratedGameScene extends Phaser.Scene {
 
     const context = canvasTexture.getContext()
     context.clearRect(0, 0, width, height)
-    context.drawImage(source, 0, 0, width, height)
+    context.drawImage(
+      source,
+      sourceRect.x,
+      sourceRect.y,
+      sourceRect.width,
+      sourceRect.height,
+      0,
+      0,
+      width,
+      height,
+    )
 
     const imageData = context.getImageData(0, 0, width, height)
     const data = imageData.data
