@@ -928,7 +928,7 @@ function inferProfileFromRaw(
 
   if (
     combined.includes('slingshot') ||
-    combined.includes('angry birds') ||
+    combined.includes('catapult') ||
     combined.includes('destroy-targets') ||
     combined.includes('fortress') ||
     combined.includes('matter-rigid-body') ||
@@ -972,9 +972,8 @@ function inferRuntimeProfileFromText(text: string): RuntimeProfile {
   const lowered = text.toLowerCase()
 
   if (
-    lowered.includes('angry birds') ||
-    lowered.includes('slingshot') ||
     lowered.includes('catapult') ||
+    lowered.includes('slingshot') ||
     lowered.includes('physics destruction') ||
     lowered.includes('derribo') ||
     lowered.includes('destruccion')

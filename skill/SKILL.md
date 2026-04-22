@@ -77,9 +77,9 @@ If no backend is configured, Gameclaw should fall back to a local blueprint/demo
 - Keep physics bodies separate from visuals: Matter shapes can be invisible while sprites follow them.
 - For slingshot games, the elastic band should be dynamic and visually tied to the projectile, while trajectory prediction should use the same launch vector as the real shot.
 
-## Slingshot / Angry Birds Style
+## Slingshot Destruction Style
 
-For concepts similar to Angry Birds:
+For slingshot, catapult, demolition, fortress-collapse, or physics-destruction concepts:
 
 - Use `systems.movement = "slingshot"`.
 - Use `systems.physics = "matter-rigid-body"`.

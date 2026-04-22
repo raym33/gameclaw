@@ -28,7 +28,7 @@ const PROMPT_SEEDS = [
   'Gameclaw lo colapsa a un vertical slice estable en vez de inventar un proyecto roto.',
 ]
 
-const EXAMPLE_NOTES = `Quiero una mezcla rara: plataformas laterales con reliquias antiguas y una habilidad de rebobinado corto cuando fallas un salto. Si pido algo estilo Angry Birds o destrucción física, quiero que el sistema cambie de runtime y use cuerpos rígidos de verdad.`
+const EXAMPLE_NOTES = `Quiero una mezcla rara: plataformas laterales con reliquias antiguas y una habilidad de rebobinado corto cuando fallas un salto. Si pido algo de tirachinas, catapulta o destrucción física, quiero que el sistema cambie de runtime y use cuerpos rígidos de verdad.`
 
 export default function App() {
   const [uploads, setUploads] = useState<UploadItem[]>([])
