@@ -37,10 +37,13 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+  const isDirectDemo = useMemo(
+    () => new URLSearchParams(window.location.search).get('demo') === 'astral-orchard',
+    [],
+  )
 
   useEffect(() => {
-    const demo = new URLSearchParams(window.location.search).get('demo')
-    if (demo !== 'astral-orchard') {
+    if (!isDirectDemo) {
       return
     }
 
@@ -81,7 +84,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [isDirectDemo])
 
   useEffect(() => {
     return () => {
@@ -186,6 +189,34 @@ export default function App() {
       }
       return current.filter((item) => item.id !== id)
     })
+  }
+
+  function requestFullscreen() {
+    if (!document.fullscreenElement) {
+      void document.documentElement.requestFullscreen?.()
+    }
+  }
+
+  if (isDirectDemo) {
+    return (
+      <main className="demo-fullscreen-shell">
+        <div className="demo-hud-overlay">
+          <div>
+            <strong>Astral Orchard</strong>
+            <span>Arrastra hacia atrás y suelta. WASD/flechas tensan, espacio dispara.</span>
+          </div>
+          <button className="secondary-button" type="button" onClick={requestFullscreen}>
+            Pantalla completa
+          </button>
+        </div>
+
+        {result ? (
+          <GameCanvas blueprint={result.blueprint} />
+        ) : (
+          <div className="demo-loading-state">{error ?? (busy ? 'Cargando demo...' : 'Preparando demo...')}</div>
+        )}
+      </main>
+    )
   }
 
   return (
