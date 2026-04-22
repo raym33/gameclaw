@@ -1,8 +1,8 @@
 interface:
   display_name: "Gameclaw"
-  short_description: "Sketches and sprites to playable game slices"
+  short_description: "Game sketches to playable Phaser slices"
   brand_color: "#F3BF63"
-  default_prompt: "Use $gameclaw to turn my game sketches, sprites, notes, or screenshots into a playable browser prototype."
+  default_prompt: "Use $gameclaw to turn my sketches, sprites, notes, and mechanics into a playable browser prototype."
 
 policy:
   allow_implicit_invocation: true

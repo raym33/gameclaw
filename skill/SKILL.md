@@ -1,147 +1,101 @@
 ---
 name: gameclaw
-description: Use when working with the Gameclaw repository to turn sketches, sprites, screenshots, handwritten notes, or rough game concepts into playable browser vertical slices using React, Express, Phaser, Matter physics, and local or OpenAI-compatible multimodal AI backends. Use for implementing or improving Gameclaw runtimes, blueprints, generated game prototypes, Astral Orchard demo behavior, upload-to-game flows, local Ollama/LM Studio configuration, and repo validation.
+description: Use when working with the Gameclaw repo or when a user wants Codex to turn game sketches, sprites, screenshots, handwritten notes, moodboards, or rough mechanics into a playable browser prototype. Covers Gameclaw architecture, blueprint generation, Phaser/Matter runtimes, Astral Orchard, local Ollama/LM Studio or OpenAI-compatible backends, sprite fidelity, validation, and publishing changes to raym33/gameclaw.
 ---
 
 # Gameclaw
 
-Gameclaw is a sketch-to-game prototyping repo. Use this skill when the user wants Codex to generate, improve, debug, or run a playable game prototype from visual references and mechanics.
+Use this skill to work on Gameclaw end to end: multimodal game idea intake, blueprint generation, stable runtime selection, playable Phaser prototypes, and Codex skill packaging.
 
-## Core Workflow
+## Start Here
 
-1. Work from the Gameclaw repo root. If the repo is missing, clone `https://github.com/raym33/gameclaw`.
-2. Inspect current state with `git status --short`; do not overwrite unrelated user changes.
-3. Identify whether the request concerns:
-   - blueprint generation: `server/blueprint.ts`, `server/openai.ts`, `shared/game.ts`
-   - API/upload flow: `server/index.ts`, `src/lib/api.ts`
-   - UI: `src/App.tsx`, `src/index.css`
-   - playable runtime: `src/game/createGame.ts`
-   - curated demo: `server/demo.ts`, `demo-inputs/sample-user`, `src/assets/astral-orchard`
-4. Implement the smallest stable vertical slice. Favor known systems and runtime profiles over freeform generated code.
-5. Validate with `npm run lint` and `npm run build`.
-6. For local testing, use `npm run dev` and open `http://localhost:5173/?demo=astral-orchard` for the curated demo.
+1. Find or clone the repo: `https://github.com/raym33/gameclaw`.
+2. Run `git status --short` before editing and preserve unrelated user changes.
+3. Classify the request:
+   - **Blueprint/AI**: `server/blueprint.ts`, `server/openai.ts`, `shared/game.ts`
+   - **API/upload**: `server/index.ts`, `src/lib/api.ts`
+   - **UI/demo shell**: `src/App.tsx`, `src/index.css`
+   - **Playable runtime**: `src/game/createGame.ts`
+   - **Curated demo/assets**: `server/demo.ts`, `demo-inputs/sample-user`, `src/assets/astral-orchard`
+   - **Skill packaging**: `skill/SKILL.md`, `skill/agents/openai.yaml`, `skill/references/*`
+4. Implement the smallest stable playable slice. Do not generate broad, unbounded game architecture.
+5. Validate with `npm run lint` and `npm run build` unless the change is documentation-only.
 
-## Runtime Model
+## Operating Rules
 
-Gameclaw maps concepts to a composable system stack, then derives a stable runtime profile.
+- Prefer stable systems over freeform generated code.
+- Let AI choose intent, systems, parameters, and backlog; let code and engines execute gameplay.
+- Keep physics real: use Phaser arcade-style logic for simple profiles and Matter for rigid-body destruction.
+- Keep visuals honest: use user-provided or curated sprites when visual fidelity is requested.
+- Do not use procedural character rigs unless the user explicitly requests them.
+- If a concept cannot be fully generated, return a playable vertical slice plus clear approximation/backlog.
 
-Supported runtime profiles:
+## Reference Loading
 
-- `arena-survivor`
-- `lane-runner`
-- `relic-hunt`
-- `platformer-expedition`
-- `slingshot-destruction`
+Load only what is needed:
 
-Supported system dimensions live in `shared/game.ts`:
+- For runtime/profile decisions, read [runtime-profiles.md](references/runtime-profiles.md).
+- For Ollama, LM Studio, OpenAI-compatible setup, read [local-ai.md](references/local-ai.md).
+- For sprites, cutouts, animation, and Astral Orchard visual rules, read [visual-fidelity.md](references/visual-fidelity.md).
 
-- camera
-- movement
-- physics
-- combat
-- objective
-- world layout
-- special mechanic
-
-When adding a new mechanic, first decide whether it is:
-
-- `native`: fits an existing runtime directly
-- `hybrid`: fits an existing runtime with a custom twist
-- `approximate`: too broad for current engine; preserve the strongest hook in a stable slice
-
-Do not let the AI invent arbitrary physics or arbitrary game architecture. The model should select systems and parameters; Phaser/Matter should execute the game.
-
-## AI Backends
-
-Gameclaw supports local and OpenAI-compatible backends:
-
-- `AI_PROVIDER=ollama`
-- `AI_PROVIDER=lmstudio`
-- `AI_PROVIDER=openai-compatible`
-- legacy `OPENAI_*` variables
-
-Useful health check:
+## Common Commands
 
 ```bash
-curl -sS http://localhost:3001/api/health
-```
-
-If no backend is configured, Gameclaw should fall back to a local blueprint/demo rather than crash.
-
-## Visual And Sprite Rules
-
-- Prefer original uploaded or curated sprites over procedural placeholder art when the user asks for visual fidelity.
-- For `Astral Orchard`, the original character source is `src/assets/astral-orchard/original-sprite-sheet.png`.
-- Avoid procedural character rigs unless the user explicitly asks for them.
-- If sprites contain baked backgrounds, use runtime cutout/cropping or prepare transparent assets.
-- Keep physics bodies separate from visuals: Matter shapes can be invisible while sprites follow them.
-- For slingshot games, the elastic band should be dynamic and visually tied to the projectile, while trajectory prediction should use the same launch vector as the real shot.
-
-## Slingshot Destruction Style
-
-For slingshot, catapult, demolition, fortress-collapse, or physics-destruction concepts:
-
-- Use `systems.movement = "slingshot"`.
-- Use `systems.physics = "matter-rigid-body"`.
-- Use `systems.objective = "destroy-targets"`.
-- Runtime profile should derive to `slingshot-destruction`.
-- The player interaction should be: drag projectile backward, show elastic tension, release, then let Matter handle collision/collapse.
-- Preserve authored level readability over random debris.
-
-Key file: `src/game/createGame.ts`.
-
-## Direct Demo
-
-The curated playable demo is Astral Orchard.
-
-Run:
-
-```bash
+npm install
 npm run dev
-```
-
-Open:
-
-```text
-http://localhost:5173/?demo=astral-orchard
-```
-
-If using a production build:
-
-```bash
+npm run lint
 npm run build
 npm run start
 ```
 
-Open:
+Useful URLs:
+
+```text
+http://localhost:5173
+http://localhost:5173/?demo=astral-orchard
+http://localhost:3001/api/health
+```
+
+Production build URL after `npm run start`:
 
 ```text
 http://localhost:3001/?demo=astral-orchard
 ```
 
-## Validation
+## Validation Checklist
 
-Before finishing code changes:
+- `npm run lint` passes.
+- `npm run build` passes.
+- `/api/health` returns the active backend or fallback state.
+- `/api/demo/astral-orchard` returns a valid generation result.
+- The canvas appears.
+- The requested control loop works in browser.
+- Sprite/physics changes are visually checked, not only type-checked.
+
+## Installing This Skill
+
+From the repo root:
 
 ```bash
-npm run lint
-npm run build
+./skill/scripts/install.sh
 ```
 
-If browser behavior matters, do a real browser smoke test. Verify:
+Then invoke it in Codex with:
 
-- the app loads
-- `/api/health` works
-- `/api/demo/astral-orchard` returns a blueprint
-- the canvas appears
-- the relevant control loop works
+```text
+$gameclaw
+```
 
-## GitHub
+Example:
 
-If the user asks to publish the work, commit focused changes and push to `origin main` for `raym33/gameclaw`.
+```text
+Use $gameclaw to turn these uploaded sketches and sprites into a playable prototype.
+```
 
-Use concise commit messages, for example:
+## Publishing
 
-- `Add Gameclaw Codex skill`
-- `Improve slingshot sprite animation`
-- `Add runtime profile for stealth prototype`
+When the user asks to publish changes:
+
+1. Commit only relevant files.
+2. Use a focused message, e.g. `Improve Gameclaw skill`.
+3. Push to `origin main` for `raym33/gameclaw`.
