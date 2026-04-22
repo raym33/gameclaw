@@ -1,136 +1,69 @@
 # Gameclaw
 
-Gameclaw is a sketch-to-game prototype repo: the user uploads photos of videogame sketches, sprite sheets, screenshots, handwritten mechanic notes, or rough moodboards, and the app turns that material into:
+Gameclaw turns rough game references into playable browser prototypes.
 
-- an AI-generated game blueprint
-- a composable gameplay system stack
-- a playable browser prototype rendered immediately in Phaser
-- reusable asset prompts, implementation notes, and production backlog
+Upload sketches, sprite sheets, screenshots, handwritten notes or moodboards. Gameclaw reads the idea, builds a structured game blueprint, chooses a stable runtime profile, and renders a vertical slice in Phaser.
 
-The important change is architectural: Gameclaw no longer depends on three fixed templates. It now maps inputs to a stable runtime profile through systems like movement, physics, combat, objective, layout, and special mechanic.
+## What It Can Build
 
-## What It Does
+- Arcade survivor
+- Lane runner
+- Relic hunt
+- Platformer expedition
+- Slingshot destruction with Matter physics
 
-1. Upload multiple visual references.
-2. Add optional notes about genre, controls, tone, or mechanics.
-3. The backend analyzes the images with a multimodal AI backend.
-4. The app emits a structured blueprint with:
-   - `systems`
-   - `physics`
-   - `supportLevel`
-   - `approximationStrategy`
-5. The frontend executes a runtime profile that fits those systems.
-
-## Runtime Profiles
-
-Gameclaw currently supports these stable profiles:
-
-- `arena-survivor`
-- `lane-runner`
-- `relic-hunt`
-- `platformer-expedition`
-- `slingshot-destruction`
-
-Those are not user-facing templates anymore. They are implementation targets chosen from the system stack.
-
-## Supported Systems
-
-- Camera: `top-down`, `side-view`
-- Movement: `free-8dir`, `lane-switch`, `platformer`, `slingshot`
-- Physics: `scripted-arcade`, `matter-rigid-body`
-- Combat: `auto-shoot`, `pulse-burst`, `projectile-shot`, `none`
-- Objective: `survive`, `collect`, `finish-run`, `destroy-targets`
-- Layout: `arena`, `lanes`, `relic-field`, `platform-route`, `fortress-stack`
-- Special: `combo-chain`, `rewind-dash`, `destructible-structures`
-
-## Weird Or Original Games
-
-This repo now handles unusual requests more honestly:
-
-- If the idea fits a stable runtime, support is `native`.
-- If the idea needs one unusual twist on top of a stable runtime, support is `hybrid`.
-- If the idea is broader than the current engine can faithfully execute, support is `approximate`.
-
-That means the system can now say:
-
-- “this becomes a platformer with rewind”
-- “this becomes a slingshot destruction game with real rigid bodies”
-- “this becomes an arena slice preserving the strongest hook”
-
-instead of pretending it can generate any game architecture from scratch.
-
-## Physics
-
-Physics are not invented by the model. The model only chooses the runtime and parameters.
-
-- Most profiles use scripted arcade motion for readability and reliability.
-- `slingshot-destruction` uses Phaser Matter rigid bodies for projectile launch, stacking, and collapse.
-
-That is the path for ideas like `Angry Birds`: use a real physics runtime, not freeform code generation.
+The system favors stable playable slices over pretending it can generate any full game from scratch.
 
 ## Stack
 
-- React + Vite for the UI
-- Express for uploads and orchestration
-- Ollama or OpenAI-compatible backends for multimodal analysis and structured output
-- Phaser 3 for the playable prototype runtime
-- Phaser Matter for rigid-body destruction prototypes
+- React + Vite
+- Express
+- Phaser 3
+- Phaser Matter
+- Ollama, LM Studio or OpenAI-compatible AI backends
 
-## Setup
+## Run
 
 ```bash
 npm install
 cp .env.example .env
-```
-
-Run:
-
-```bash
 npm run dev
 ```
 
-Frontend: [http://localhost:5173](http://localhost:5173)  
-Backend: [http://localhost:3001](http://localhost:3001)
+Open:
 
-## AI Backends
+```text
+http://localhost:5173
+```
 
-Gameclaw no longer depends on OpenAI specifically. It supports:
+Direct demo:
 
-- `ollama` for local models on this Mac or another machine
-- `lmstudio` for a Mac mini running LM Studio
-- generic `openai-compatible` endpoints
-- the old `OPENAI_*` env vars as a legacy compatibility path
+```text
+http://localhost:5173/?demo=astral-orchard
+```
 
-If you do not configure anything, Gameclaw tries local Ollama first through `http://127.0.0.1:11434` with `gemma3:4b`. If that fails, it falls back to the built-in demo blueprint mode so the repo still works.
+## Local AI Backends
 
-### Ollama Example
+Gameclaw can use local or OpenAI-compatible models.
+
+Ollama example:
 
 ```bash
 AI_PROVIDER=ollama
 AI_BASE_URL=http://127.0.0.1:11434
 AI_MODEL=gemma3:4b
-AI_PROVIDER_LABEL=MacBook Ollama
 ```
 
-### LM Studio Example
+LM Studio example:
 
 ```bash
 AI_PROVIDER=lmstudio
 AI_BASE_URL=http://192.168.1.50:1234/v1
 AI_MODEL=qwen2.5-vl-7b-instruct
 AI_API_KEY=lm-studio
-AI_PROVIDER_LABEL=Mac mini LM Studio
 ```
 
-### Legacy OpenAI-Compatible Example
-
-```bash
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5.4-mini
-OPENAI_BASE_URL=
-```
-
-Use `/api/health` to confirm which backend is active.
+If no AI backend is available, the app falls back to a local demo blueprint.
 
 ## Build
 
@@ -140,10 +73,34 @@ npm run build
 npm run start
 ```
 
-## Notes
+Production URL:
 
-- `lmstudio` uses the OpenAI-compatible `Responses` shape, so it works well for multimodal structured output.
-- `ollama` uses `/api/chat` with image attachments and a JSON schema response format.
-- If the configured AI backend fails at runtime, the server falls back to the local demo blueprint and adds a warning to the response instead of crashing the prototype flow.
+```text
+http://localhost:3001
+```
 
-- MIT license.
+## Codex Skill
+
+This repo includes a Codex skill in:
+
+```text
+skill/
+```
+
+To use it in Codex, install or copy the `skill/` folder into your Codex skills directory, then invoke:
+
+```text
+$gameclaw
+```
+
+Example prompt:
+
+```text
+Use $gameclaw to turn these sketches, sprites and notes into a playable browser prototype.
+```
+
+The skill teaches Codex how to work with this repo, including runtime profiles, local AI backends, the Astral Orchard demo, Phaser/Matter validation, and when to use original sprites instead of procedural placeholders.
+
+## License
+
+MIT
