@@ -39,6 +39,51 @@ export default function App() {
   const [dragging, setDragging] = useState(false)
 
   useEffect(() => {
+    const demo = new URLSearchParams(window.location.search).get('demo')
+    if (demo !== 'astral-orchard') {
+      return
+    }
+
+    let cancelled = false
+    void Promise.resolve()
+      .then(() => {
+        if (cancelled) {
+          return
+        }
+
+        setBusy(true)
+        setError(null)
+
+        return requestAstralOrchardDemo()
+      })
+      .then((generation) => {
+        if (cancelled || !generation) {
+          return
+        }
+
+        startTransition(() => {
+          setResult(generation)
+        })
+      })
+      .catch((caughtError: unknown) => {
+        if (cancelled) {
+          return
+        }
+
+        setError(caughtError instanceof Error ? caughtError.message : 'No se pudo cargar la demo.')
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setBusy(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
     return () => {
       uploads.forEach((item) => URL.revokeObjectURL(item.previewUrl))
     }

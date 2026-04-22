@@ -1,4 +1,12 @@
 import Phaser from 'phaser'
+import astralBackgroundUrl from '../assets/astral-orchard/background-concept.png'
+import astralBrassBeamUrl from '../assets/astral-orchard/brass-beam.png'
+import astralGlassPillarUrl from '../assets/astral-orchard/glass-pillar.png'
+import astralHeroLauncherUrl from '../assets/astral-orchard/hero-launcher.png'
+import astralOrbitCoreUrl from '../assets/astral-orchard/orbit-core.png'
+import astralStarSeedUrl from '../assets/astral-orchard/star-seed.png'
+import astralWoodBeamUrl from '../assets/astral-orchard/wood-beam.png'
+import astralWoodSupportUrl from '../assets/astral-orchard/wood-support.png'
 
 import {
   RUNTIME_LABELS,
@@ -35,7 +43,30 @@ type PlatformData = {
 
 type MatterShape = ShapeObject & {
   body: MatterJS.BodyType
+  art?: Phaser.GameObjects.Image
+  shadow?: Phaser.GameObjects.Ellipse
 }
+
+const ASTRAL_TEXTURES = {
+  background: 'astral-bg',
+  heroLauncher: 'astral-hero-launcher',
+  projectile: 'astral-projectile',
+  target: 'astral-target',
+  woodBeam: 'astral-wood-beam',
+  woodSupport: 'astral-wood-support',
+  glassPillar: 'astral-glass-pillar',
+  brassBeam: 'astral-brass-beam',
+} as const
+
+const ASTRAL_CUTOUT_TEXTURES = {
+  heroLauncher: 'astral-hero-launcher-cutout',
+  projectile: 'astral-projectile-cutout',
+  target: 'astral-target-cutout',
+  woodBeam: 'astral-wood-beam-cutout',
+  woodSupport: 'astral-wood-support-cutout',
+  glassPillar: 'astral-glass-pillar-cutout',
+  brassBeam: 'astral-brass-beam-cutout',
+} as const
 
 type SlingshotMaterial = 'wood' | 'glass' | 'brass'
 
@@ -219,9 +250,25 @@ class GeneratedGameScene extends Phaser.Scene {
     this.runtimeProfile = runtimeProfile
   }
 
+  preload(): void {
+    if (this.runtimeProfile !== 'slingshot-destruction') {
+      return
+    }
+
+    this.load.image(ASTRAL_TEXTURES.background, astralBackgroundUrl)
+    this.load.image(ASTRAL_TEXTURES.heroLauncher, astralHeroLauncherUrl)
+    this.load.image(ASTRAL_TEXTURES.projectile, astralStarSeedUrl)
+    this.load.image(ASTRAL_TEXTURES.target, astralOrbitCoreUrl)
+    this.load.image(ASTRAL_TEXTURES.woodBeam, astralWoodBeamUrl)
+    this.load.image(ASTRAL_TEXTURES.woodSupport, astralWoodSupportUrl)
+    this.load.image(ASTRAL_TEXTURES.glassPillar, astralGlassPillarUrl)
+    this.load.image(ASTRAL_TEXTURES.brassBeam, astralBrassBeamUrl)
+  }
+
   create(): void {
     this.timeLeft = defaultTimerForProfile(this.runtimeProfile)
 
+    this.prepareAstralCutoutTextures()
     this.drawBackdrop(this.blueprint.palette)
     this.createHud()
     this.createControls()
@@ -365,8 +412,15 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private drawBackdrop(palette: GamePalette): void {
+    if (this.runtimeProfile === 'slingshot-destruction' && this.textures.exists(ASTRAL_TEXTURES.background)) {
+      const image = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASTRAL_TEXTURES.background)
+      const scale = Math.max(GAME_WIDTH / image.width, GAME_HEIGHT / image.height)
+      image.setScale(scale)
+      image.setAlpha(0.5)
+    }
+
     const graphics = this.add.graphics()
-    graphics.fillStyle(parseColor(palette.bg), 1)
+    graphics.fillStyle(parseColor(palette.bg), this.runtimeProfile === 'slingshot-destruction' ? 0.62 : 1)
     graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
 
     if (this.runtimeProfile === 'slingshot-destruction') {
@@ -381,7 +435,7 @@ class GeneratedGameScene extends Phaser.Scene {
       }
     }
 
-    graphics.fillStyle(parseColor(palette.surface), 0.45)
+    graphics.fillStyle(parseColor(palette.surface), this.runtimeProfile === 'slingshot-destruction' ? 0.28 : 0.45)
     for (let i = 0; i < 9; i += 1) {
       graphics.fillRoundedRect(70 + i * 90, 40 + (i % 2) * 36, 120, 340, 18)
     }
@@ -654,6 +708,15 @@ class GeneratedGameScene extends Phaser.Scene {
     const launcher = this.add.rectangle(120, GAME_HEIGHT - 105, 18, 72, parseColor(this.blueprint.palette.accent))
     this.matter.add.gameObject(launcher, { isStatic: true })
 
+    if (this.textures.exists(ASTRAL_CUTOUT_TEXTURES.heroLauncher)) {
+      this.add
+        .image(156, GAME_HEIGHT - 70, ASTRAL_CUTOUT_TEXTURES.heroLauncher)
+        .setOrigin(0.35, 1)
+        .setScale(0.175)
+        .setDepth(5)
+        .setAlpha(0.98)
+    }
+
     this.loadSlingshotLevel(0)
     this.refreshDragGuide()
 
@@ -668,6 +731,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.refreshDragGuide()
+    this.syncSlingshotArt()
     this.updateMatterTargets()
     this.updateMatterBlocks()
     this.updateFloatingShards()
@@ -687,6 +751,8 @@ class GeneratedGameScene extends Phaser.Scene {
         projectile.y < -120
 
       if (rested || lost) {
+        projectile.art?.destroy()
+        projectile.shadow?.destroy()
         projectile.destroy()
         this.slingshot.projectile = null
         this.slingshot.projectileLaunched = false
@@ -1103,11 +1169,13 @@ class GeneratedGameScene extends Phaser.Scene {
         blockDef.height,
         parseColor(slingshotMaterialColor(blockDef.material, this.blueprint.palette)),
       )
-      block.setStrokeStyle(2, parseColor(this.blueprint.palette.text), blockDef.material === 'glass' ? 0.3 : 0.18)
+      block.setStrokeStyle(2, parseColor(this.blueprint.palette.text), 0.01)
+      block.setAlpha(0.01)
       const gameObject = this.matter.add.gameObject(block, {
         friction: this.blueprint.physics.friction,
         restitution: blockDef.material === 'glass' ? this.blueprint.physics.bounce * 0.22 : this.blueprint.physics.bounce * 0.38,
       }) as MatterShape
+      gameObject.art = this.createSlingshotBlockArt(blockDef.material, blockDef.x, blockDef.y, blockDef.width, blockDef.height)
 
       this.slingshot.blocks.push({
         shape: gameObject,
@@ -1125,11 +1193,13 @@ class GeneratedGameScene extends Phaser.Scene {
         targetDef.radius ?? 16,
         parseColor(this.blueprint.palette.danger),
       )
-      target.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.52)
+      target.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.01)
+      target.setAlpha(0.01)
       const gameObject = this.matter.add.gameObject(target, {
         friction: this.blueprint.physics.friction,
         restitution: this.blueprint.physics.bounce * 0.15,
       }) as MatterShape
+      gameObject.art = this.createSlingshotTargetArt(targetDef.x, targetDef.y, (targetDef.radius ?? 16) * 2.8)
 
       this.slingshot.targets.push({
         shape: gameObject,
@@ -1172,9 +1242,13 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     for (const block of this.slingshot.blocks) {
+      block.shape.art?.destroy()
+      block.shape.shadow?.destroy()
       block.shape.destroy()
     }
     for (const target of this.slingshot.targets) {
+      target.shape.art?.destroy()
+      target.shape.shadow?.destroy()
       target.shape.destroy()
     }
 
@@ -1188,6 +1262,8 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
+    this.slingshot.projectile.art?.destroy()
+    this.slingshot.projectile.shadow?.destroy()
     this.slingshot.projectile.destroy()
     this.slingshot.projectile = null
     this.slingshot.projectileLaunched = false
@@ -1205,7 +1281,8 @@ class GeneratedGameScene extends Phaser.Scene {
       18,
       parseColor(this.blueprint.palette.accent),
     )
-    projectile.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.7)
+    projectile.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.01)
+    projectile.setAlpha(0.01)
 
     const matterProjectile = this.matter.add.gameObject(projectile, {
       friction: this.blueprint.physics.friction,
@@ -1214,6 +1291,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }) as MatterShape
 
     this.matter.body.setStatic(matterProjectile.body, true)
+    matterProjectile.art = this.createSlingshotProjectileArt(this.slingshot.anchor.x, this.slingshot.anchor.y)
     this.slingshot.projectile = matterProjectile
     this.slingshot.projectileLaunched = false
     this.slingshot.shotsRemaining -= 1
@@ -1308,6 +1386,8 @@ class GeneratedGameScene extends Phaser.Scene {
       if (destroyed) {
         this.addScore(30)
         this.spawnShard(target.shape.x, target.shape.y)
+        target.shape.art?.destroy()
+        target.shape.shadow?.destroy()
         target.shape.destroy()
         this.slingshot.targets.splice(this.slingshot.targets.indexOf(target), 1)
         this.cameras.main.shake(120, 0.005)
@@ -1330,10 +1410,135 @@ class GeneratedGameScene extends Phaser.Scene {
         if (block.material !== 'glass') {
           this.spawnShard(block.shape.x, block.shape.y)
         }
+        block.shape.art?.destroy()
+        block.shape.shadow?.destroy()
         block.shape.destroy()
         this.slingshot.blocks.splice(this.slingshot.blocks.indexOf(block), 1)
       }
     }
+  }
+
+  private syncSlingshotArt(): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    for (const block of this.slingshot.blocks) {
+      this.syncAttachedArt(block.shape, 7, 1)
+    }
+
+    for (const target of this.slingshot.targets) {
+      this.syncAttachedArt(target.shape, 8, 1)
+    }
+
+    if (this.slingshot.projectile) {
+      this.syncAttachedArt(this.slingshot.projectile, 9, 1)
+    }
+  }
+
+  private syncAttachedArt(shape: MatterShape, depth: number, alpha: number): void {
+    shape.art?.setPosition(shape.x, shape.y).setRotation(shape.rotation).setDepth(depth).setAlpha(alpha)
+    shape.shadow?.setPosition(shape.x, GAME_HEIGHT - 66).setDepth(depth - 1)
+  }
+
+  private prepareAstralCutoutTextures(): void {
+    if (this.runtimeProfile !== 'slingshot-destruction') {
+      return
+    }
+
+    this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.heroLauncher, ASTRAL_CUTOUT_TEXTURES.heroLauncher)
+    this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.projectile, ASTRAL_CUTOUT_TEXTURES.projectile)
+    this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.target, ASTRAL_CUTOUT_TEXTURES.target)
+    this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.woodBeam, ASTRAL_CUTOUT_TEXTURES.woodBeam)
+    this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.woodSupport, ASTRAL_CUTOUT_TEXTURES.woodSupport)
+    this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.glassPillar, ASTRAL_CUTOUT_TEXTURES.glassPillar)
+    this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.brassBeam, ASTRAL_CUTOUT_TEXTURES.brassBeam)
+  }
+
+  private createEdgeKeyedCutoutTexture(sourceKey: string, cutoutKey: string): void {
+    if (!this.textures.exists(sourceKey) || this.textures.exists(cutoutKey)) {
+      return
+    }
+
+    const source = this.textures.get(sourceKey).getSourceImage() as CanvasImageSource
+    const width = Number('width' in source ? source.width : 0)
+    const height = Number('height' in source ? source.height : 0)
+    const canvasTexture = this.textures.createCanvas(cutoutKey, width, height)
+    if (!canvasTexture || width <= 0 || height <= 0) {
+      return
+    }
+
+    const context = canvasTexture.getContext()
+    context.clearRect(0, 0, width, height)
+    context.drawImage(source, 0, 0, width, height)
+
+    const imageData = context.getImageData(0, 0, width, height)
+    const data = imageData.data
+    const visited = new Uint8Array(width * height)
+    const queue: number[] = []
+
+    const enqueue = (index: number): void => {
+      if (visited[index] || !isLightNeutralPixel(data, index)) {
+        return
+      }
+
+      visited[index] = 1
+      queue.push(index)
+    }
+
+    for (let x = 0; x < width; x += 1) {
+      enqueue(x)
+      enqueue((height - 1) * width + x)
+    }
+
+    for (let y = 1; y < height - 1; y += 1) {
+      enqueue(y * width)
+      enqueue(y * width + width - 1)
+    }
+
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const index = queue[cursor]
+      const x = index % width
+      const y = Math.floor(index / width)
+
+      if (x > 0) enqueue(index - 1)
+      if (x < width - 1) enqueue(index + 1)
+      if (y > 0) enqueue(index - width)
+      if (y < height - 1) enqueue(index + width)
+    }
+
+    for (let index = 0; index < visited.length; index += 1) {
+      if (!visited[index]) {
+        continue
+      }
+
+      data[index * 4 + 3] = 0
+    }
+
+    context.putImageData(imageData, 0, 0)
+    canvasTexture.refresh()
+  }
+
+  private createSlingshotBlockArt(
+    material: SlingshotMaterial,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): Phaser.GameObjects.Image {
+    const textureKey = slingshotMaterialTextureKey(material, width, height)
+    return this.add
+      .image(x, y, textureKey)
+      .setDisplaySize(width * slingshotArtWidthScale(material, width, height), height * slingshotArtHeightScale(material, width, height))
+      .setDepth(7)
+  }
+
+  private createSlingshotTargetArt(x: number, y: number, size: number): Phaser.GameObjects.Image {
+    return this.add.image(x, y, ASTRAL_CUTOUT_TEXTURES.target).setDisplaySize(size, size).setDepth(8)
+  }
+
+  private createSlingshotProjectileArt(x: number, y: number): Phaser.GameObjects.Image {
+    return this.add.image(x, y, ASTRAL_CUTOUT_TEXTURES.projectile).setDisplaySize(58, 58).setDepth(9)
   }
 
   private updateFloatingShards(): void {
@@ -1470,6 +1675,51 @@ function slingshotMaterialColor(material: SlingshotMaterial, palette: GamePalett
     default:
       return palette.surface
   }
+}
+
+function slingshotMaterialTextureKey(material: SlingshotMaterial, width: number, height: number): string {
+  switch (material) {
+    case 'glass':
+      return ASTRAL_CUTOUT_TEXTURES.glassPillar
+    case 'brass':
+      return ASTRAL_CUTOUT_TEXTURES.brassBeam
+    case 'wood':
+      return width >= height ? ASTRAL_CUTOUT_TEXTURES.woodBeam : ASTRAL_CUTOUT_TEXTURES.woodSupport
+    default:
+      return ASTRAL_CUTOUT_TEXTURES.woodBeam
+  }
+}
+
+function isLightNeutralPixel(data: Uint8ClampedArray, index: number): boolean {
+  const offset = index * 4
+  const red = data[offset]
+  const green = data[offset + 1]
+  const blue = data[offset + 2]
+  const alpha = data[offset + 3]
+  const brightest = Math.max(red, green, blue)
+  const darkest = Math.min(red, green, blue)
+
+  return alpha < 16 || (brightest > 196 && brightest - darkest < 46)
+}
+
+function slingshotArtWidthScale(material: SlingshotMaterial, width: number, height: number): number {
+  if (material === 'glass') {
+    return 1.35
+  }
+  if (material === 'brass') {
+    return width >= height ? 1.08 : 0.95
+  }
+  return width >= height ? 1.08 : 1.35
+}
+
+function slingshotArtHeightScale(material: SlingshotMaterial, width: number, height: number): number {
+  if (material === 'glass') {
+    return 1.35
+  }
+  if (material === 'brass') {
+    return width >= height ? 1.28 : 1.1
+  }
+  return width >= height ? 1.4 : 1.28
 }
 
 function parseColor(color: string): number {
