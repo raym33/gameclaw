@@ -1,0 +1,28 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" fill="#F7F2E7"/>
+  <g stroke="#202020" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M118 702C182 616 244 534 330 434"/>
+    <path d="M334 440C392 520 438 594 500 704"/>
+    <path d="M322 460C286 554 256 618 216 670"/>
+    <path d="M336 460C376 556 408 616 444 670"/>
+    <path d="M60 742H1336"/>
+    <rect x="914" y="592" width="94" height="146" rx="10"/>
+    <rect x="1028" y="542" width="94" height="196" rx="10"/>
+    <rect x="1142" y="474" width="94" height="264" rx="10"/>
+    <rect x="998" y="508" width="174" height="28" rx="10"/>
+    <path d="M1086 434C1116 394 1162 390 1192 430"/>
+    <circle cx="1188" cy="438" r="22"/>
+    <circle cx="1082" cy="508" r="18"/>
+    <circle cx="1208" cy="398" r="18"/>
+    <path d="M340 442C512 370 714 322 948 416" stroke-dasharray="22 18"/>
+  </g>
+  <g fill="#202020" font-family="Courier New, monospace">
+    <text x="96" y="150" font-size="38">hand layout / idea sheet</text>
+    <text x="92" y="198" font-size="22">left = sling</text>
+    <text x="92" y="232" font-size="22">right = tower stack</text>
+    <text x="92" y="266" font-size="22">targets inside glass blocks</text>
+    <text x="92" y="300" font-size="22">one pretty collapse per level</text>
+    <text x="460" y="350" font-size="24">launch arc</text>
+    <text x="1010" y="790" font-size="22">fragile base</text>
+  </g>
+</svg>

@@ -1,0 +1,20 @@
+Proyecto ficticio de prueba: "Astral Orchard"
+
+Idea:
+Un juego bonito y original de destruccion fisica con vista lateral.
+Eres una jardinera astronomica que lanza semillas estelares con un tirachinas
+para romper torres de cristal y liberar corazones-orbita atrapados.
+
+Mecanica principal:
+- slingshot fisico real
+- estructuras frágiles con bloques de vidrio, laton y madera pintada
+- pocos disparos, mucho placer visual al caer
+- si encadenas un derribo bonito, salen luciernagas y polvo brillante
+
+Tono:
+- papercraft elegante
+- observatorio nocturno
+- acuarela + vidrio coloreado
+
+Sensacion:
+Bonito, tactil, un poco melancolico, pero muy jugable.

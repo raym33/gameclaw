@@ -41,6 +41,7 @@ type SlingshotState = {
   anchor: { x: number; y: number }
   dragGuide: Phaser.GameObjects.Graphics
   projectile: MatterShape | null
+  projectileLaunched: boolean
   dragging: boolean
   shotsRemaining: number
   blocks: MatterShape[]
@@ -520,6 +521,7 @@ class GeneratedGameScene extends Phaser.Scene {
       anchor: { x: 140, y: GAME_HEIGHT - 120 },
       dragGuide: this.add.graphics(),
       projectile: null,
+      projectileLaunched: false,
       dragging: false,
       shotsRemaining: 5,
       blocks: [],
@@ -557,7 +559,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     const projectile = this.slingshot.projectile
-    if (projectile && !this.slingshot.dragging) {
+    if (projectile && this.slingshot.projectileLaunched && !this.slingshot.dragging) {
       const rested = projectile.body.speed < 0.2 && this.time.now - this.slingshot.lastReleaseAt > 1100
       const lost =
         projectile.x > GAME_WIDTH + 120 ||
@@ -568,6 +570,7 @@ class GeneratedGameScene extends Phaser.Scene {
       if (rested || lost) {
         projectile.destroy()
         this.slingshot.projectile = null
+        this.slingshot.projectileLaunched = false
 
         if (this.slingshot.shotsRemaining > 0) {
           this.time.delayedCall(350, () => {
@@ -1011,6 +1014,7 @@ class GeneratedGameScene extends Phaser.Scene {
 
     this.matter.body.setStatic(matterProjectile.body, true)
     this.slingshot.projectile = matterProjectile
+    this.slingshot.projectileLaunched = false
     this.slingshot.shotsRemaining -= 1
   }
 
@@ -1060,6 +1064,7 @@ class GeneratedGameScene extends Phaser.Scene {
     ).scale(this.blueprint.physics.projectilePower / 30)
 
     this.slingshot.dragging = false
+    this.slingshot.projectileLaunched = true
     this.slingshot.lastReleaseAt = this.time.now
 
     this.matter.body.setStatic(projectile.body, false)

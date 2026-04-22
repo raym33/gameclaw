@@ -1,0 +1,21 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" fill="#FFF8EE"/>
+  <g stroke="#292421" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="100" y="132" width="1202" height="636" rx="24"/>
+    <rect x="170" y="202" width="420" height="104" rx="20"/>
+    <rect x="818" y="202" width="414" height="104" rx="20"/>
+    <rect x="172" y="390" width="1058" height="266" rx="20"/>
+    <path d="M302 510H1094"/>
+    <path d="M302 564H934"/>
+  </g>
+  <g fill="#292421" font-family="Courier New, monospace">
+    <text x="112" y="92" font-size="42">hand notes / ui thought</text>
+    <text x="204" y="264" font-size="28">shots: 5</text>
+    <text x="846" y="264" font-size="28">targets left: 3</text>
+    <text x="210" y="454" font-size="28">- launch feels elastic, not angry</text>
+    <text x="210" y="508" font-size="28">- glass shatters first, wood bends a bit</text>
+    <text x="210" y="562" font-size="28">- every hit should sparkle / tiny moth lights</text>
+    <text x="210" y="616" font-size="28">- fail state okay if screen still looks beautiful</text>
+    <text x="214" y="716" font-size="24">goal: tactile + elegant + readable</text>
+  </g>
+</svg>
