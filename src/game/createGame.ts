@@ -2,7 +2,6 @@ import Phaser from 'phaser'
 import astralBackgroundUrl from '../assets/astral-orchard/background-concept.png'
 import astralBrassBeamUrl from '../assets/astral-orchard/brass-beam.png'
 import astralGlassPillarUrl from '../assets/astral-orchard/glass-pillar.png'
-import astralHeroLauncherUrl from '../assets/astral-orchard/hero-launcher.png'
 import astralOrbitCoreUrl from '../assets/astral-orchard/orbit-core.png'
 import astralStarSeedUrl from '../assets/astral-orchard/star-seed.png'
 import astralWoodBeamUrl from '../assets/astral-orchard/wood-beam.png'
@@ -49,7 +48,6 @@ type MatterShape = ShapeObject & {
 
 const ASTRAL_TEXTURES = {
   background: 'astral-bg',
-  heroLauncher: 'astral-hero-launcher',
   projectile: 'astral-projectile',
   target: 'astral-target',
   woodBeam: 'astral-wood-beam',
@@ -59,7 +57,6 @@ const ASTRAL_TEXTURES = {
 } as const
 
 const ASTRAL_CUTOUT_TEXTURES = {
-  heroLauncher: 'astral-hero-launcher-cutout',
   projectile: 'astral-projectile-cutout',
   target: 'astral-target-cutout',
   woodBeam: 'astral-wood-beam-cutout',
@@ -106,6 +103,21 @@ type SlingshotLevel = {
   targets: SlingshotTargetDefinition[]
 }
 
+type SlingshotHeroRig = {
+  container: Phaser.GameObjects.Container
+  backArm: Phaser.GameObjects.Graphics
+  frontArm: Phaser.GameObjects.Graphics
+  backLeg: Phaser.GameObjects.Graphics
+  frontLeg: Phaser.GameObjects.Graphics
+  hat: Phaser.GameObjects.Graphics
+  body: Phaser.GameObjects.Ellipse
+  scarf: Phaser.GameObjects.Triangle
+  head: Phaser.GameObjects.Ellipse
+  eye: Phaser.GameObjects.Ellipse
+  backHand: Phaser.GameObjects.Ellipse
+  frontHand: Phaser.GameObjects.Ellipse
+}
+
 type SlingshotState = {
   anchor: { x: number; y: number }
   dragGuide: Phaser.GameObjects.Graphics
@@ -121,8 +133,9 @@ type SlingshotState = {
   transitioning: boolean
   levelBadge: Phaser.GameObjects.Text
   controlHint: Phaser.GameObjects.Text
-  heroArt?: Phaser.GameObjects.Image
+  heroRig?: SlingshotHeroRig
   heroBase: { x: number; y: number }
+  elasticSnap: { startedAt: number; pullX: number; pullY: number } | null
 }
 
 const SLINGSHOT_LEVELS: SlingshotLevel[] = [
@@ -259,7 +272,6 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.load.image(ASTRAL_TEXTURES.background, astralBackgroundUrl)
-    this.load.image(ASTRAL_TEXTURES.heroLauncher, astralHeroLauncherUrl)
     this.load.image(ASTRAL_TEXTURES.projectile, astralStarSeedUrl)
     this.load.image(ASTRAL_TEXTURES.target, astralOrbitCoreUrl)
     this.load.image(ASTRAL_TEXTURES.woodBeam, astralWoodBeamUrl)
@@ -697,6 +709,7 @@ class GeneratedGameScene extends Phaser.Scene {
       levels: SLINGSHOT_LEVELS,
       transitioning: false,
       heroBase: { x: 156, y: GAME_HEIGHT - 70 },
+      elasticSnap: null,
       levelBadge: this.add
         .text(GAME_WIDTH - 28, 24, '', {
           fontFamily: 'IBM Plex Mono, monospace',
@@ -725,14 +738,8 @@ class GeneratedGameScene extends Phaser.Scene {
     launcher.setAlpha(0.01)
     this.matter.add.gameObject(launcher, { isStatic: true })
 
-    if (this.textures.exists(ASTRAL_CUTOUT_TEXTURES.heroLauncher)) {
-      this.slingshot.heroArt = this.add
-        .image(156, GAME_HEIGHT - 70, ASTRAL_CUTOUT_TEXTURES.heroLauncher)
-        .setOrigin(0.35, 1)
-        .setScale(0.175)
-        .setDepth(5)
-        .setAlpha(0.98)
-    }
+    this.drawSlingshotFrame()
+    this.slingshot.heroRig = this.createSlingshotHeroRig(this.slingshot.heroBase.x, this.slingshot.heroBase.y)
 
     this.loadSlingshotLevel(0)
     this.refreshDragGuide()
@@ -1313,6 +1320,7 @@ class GeneratedGameScene extends Phaser.Scene {
     matterProjectile.art = this.createSlingshotProjectileArt(this.slingshot.anchor.x, this.slingshot.anchor.y)
     this.slingshot.projectile = matterProjectile
     this.slingshot.projectileLaunched = false
+    this.slingshot.elasticSnap = null
     this.slingshot.shotsRemaining -= 1
   }
 
@@ -1433,6 +1441,11 @@ class GeneratedGameScene extends Phaser.Scene {
     const velocity = this.calculateSlingshotLaunchVelocity(projectile)
     this.slingshot.projectileLaunched = true
     this.slingshot.lastReleaseAt = this.time.now
+    this.slingshot.elasticSnap = {
+      startedAt: this.time.now,
+      pullX: projectile.x - this.slingshot.anchor.x,
+      pullY: projectile.y - this.slingshot.anchor.y,
+    }
 
     this.matter.body.setStatic(projectile.body, false)
     this.matter.body.setVelocity(projectile.body, { x: velocity.x, y: velocity.y })
@@ -1453,6 +1466,154 @@ class GeneratedGameScene extends Phaser.Scene {
     return this.calculateSlingshotPull(projectile).scale(this.blueprint.physics.projectilePower / 30)
   }
 
+  private drawSlingshotFrame(): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    const frame = this.add.graphics().setDepth(4)
+    const wood = parseColor('#6f4a25')
+    const brass = parseColor(this.blueprint.palette.accent)
+    const root = parseColor('#2f2118')
+    const { x, y } = this.slingshot.anchor
+
+    frame.lineStyle(18, root, 0.34)
+    frame.lineBetween(x - 5, y + 48, x - 2, y - 18)
+    frame.lineStyle(11, wood, 0.94)
+    frame.lineBetween(x - 5, y + 48, x - 2, y - 18)
+    frame.lineStyle(12, wood, 0.94)
+    frame.lineBetween(x - 2, y - 18, x - 24, y - 50)
+    frame.lineBetween(x - 2, y - 18, x + 26, y - 34)
+    frame.lineStyle(3, brass, 0.82)
+    frame.lineBetween(x - 17, y - 42, x - 8, y - 24)
+    frame.lineBetween(x + 16, y - 30, x + 2, y - 20)
+    frame.fillStyle(brass, 0.74)
+    frame.fillCircle(x - 24, y - 50, 5)
+    frame.fillCircle(x + 26, y - 34, 5)
+  }
+
+  private createSlingshotHeroRig(x: number, y: number): SlingshotHeroRig {
+    const container = this.add.container(x, y).setDepth(8)
+    const backLeg = this.add.graphics()
+    const backArm = this.add.graphics()
+    const body = this.add.ellipse(0, -45, 36, 58, parseColor('#31514a'), 0.98)
+    body.setStrokeStyle(3, parseColor('#d6c78b'), 0.7)
+    const scarf = this.add.triangle(10, -55, 0, 0, 30, 4, 8, 16, parseColor(this.blueprint.palette.accent), 0.95)
+    const frontLeg = this.add.graphics()
+    const frontArm = this.add.graphics()
+    const head = this.add.ellipse(3, -82, 26, 28, parseColor('#e8dfc5'), 0.98)
+    head.setStrokeStyle(2, parseColor('#1b2526'), 0.9)
+    const eye = this.add.ellipse(9, -84, 7, 10, parseColor('#122325'), 1)
+    const hat = this.add.graphics()
+    const backHand = this.add.ellipse(23, -58, 8, 8, parseColor('#eadca9'), 1)
+    const frontHand = this.add.ellipse(30, -60, 9, 9, parseColor('#f2e2ae'), 1)
+
+    container.add([backLeg, backArm, body, scarf, frontLeg, frontArm, head, eye, hat, backHand, frontHand])
+    this.drawSlingshotHeroRig({ container, backArm, frontArm, backLeg, frontLeg, hat, body, scarf, head, eye, backHand, frontHand }, 0, 'idle')
+
+    return { container, backArm, frontArm, backLeg, frontLeg, hat, body, scarf, head, eye, backHand, frontHand }
+  }
+
+  private drawSlingshotHeroRig(
+    rig: SlingshotHeroRig,
+    pullAmount: number,
+    mode: 'idle' | 'pull',
+    heldHand?: { x: number; y: number },
+  ): void {
+    const skin = parseColor('#eadca9')
+    const sleeve = parseColor('#83d8cf')
+    const boot = parseColor('#182827')
+    const cloak = parseColor('#31514a')
+    const accent = parseColor(this.blueprint.palette.accent)
+    const time = this.time.now
+    const idleBob = mode === 'idle' ? Math.sin(time * 0.006) * 1.3 : 0
+    const step = Math.sin(time * 0.018) * pullAmount
+    const hand = heldHand ?? { x: 30, y: -61 + idleBob }
+    const backHand = mode === 'pull' ? { x: hand.x + 7, y: hand.y + 5 } : { x: 22, y: -58 + idleBob }
+    const shoulder = { x: 8 - pullAmount * 3, y: -64 + idleBob }
+    const backShoulder = { x: -8 - pullAmount * 2, y: -63 + idleBob }
+    const hipFront = { x: 8, y: -24 + idleBob }
+    const hipBack = { x: -8, y: -24 + idleBob }
+    const frontFoot = { x: 10 - pullAmount * 18 + step * 7, y: -1 }
+    const backFoot = { x: -12 + pullAmount * 10 - step * 5, y: -1 }
+
+    rig.body.setPosition(-pullAmount * 3, -45 + idleBob)
+    rig.body.setScale(1 - pullAmount * 0.04, 1 + pullAmount * 0.05)
+    rig.head.setPosition(3 - pullAmount * 6, -82 + idleBob)
+    rig.eye.setPosition(9 - pullAmount * 6, -84 + idleBob)
+    rig.scarf.setPosition(10 - pullAmount * 3, -55 + idleBob)
+
+    rig.frontHand.setPosition(hand.x, hand.y)
+    rig.backHand.setPosition(backHand.x, backHand.y)
+
+    rig.hat.clear()
+    rig.hat.fillStyle(parseColor('#a89251'), 0.98)
+    rig.hat.fillTriangle(-30 - pullAmount * 4, -92 + idleBob, 32 - pullAmount * 4, -96 + idleBob, -2 - pullAmount * 7, -126 + idleBob)
+    rig.hat.lineStyle(2, parseColor('#2d2718'), 0.7)
+    rig.hat.strokeTriangle(-30 - pullAmount * 4, -92 + idleBob, 32 - pullAmount * 4, -96 + idleBob, -2 - pullAmount * 7, -126 + idleBob)
+    rig.hat.fillStyle(accent, 0.85)
+    rig.hat.fillCircle(-2 - pullAmount * 7, -113 + idleBob, 3)
+
+    rig.backLeg.clear()
+    rig.backLeg.lineStyle(8, boot, 0.94)
+    rig.backLeg.lineBetween(hipBack.x, hipBack.y, backFoot.x, backFoot.y)
+    rig.backLeg.lineStyle(4, accent, 0.38)
+    rig.backLeg.lineBetween(hipBack.x + 1, hipBack.y + 5, backFoot.x, backFoot.y)
+
+    rig.frontLeg.clear()
+    rig.frontLeg.lineStyle(8, boot, 0.98)
+    rig.frontLeg.lineBetween(hipFront.x, hipFront.y, frontFoot.x, frontFoot.y)
+    rig.frontLeg.lineStyle(4, accent, 0.44)
+    rig.frontLeg.lineBetween(hipFront.x - 1, hipFront.y + 5, frontFoot.x, frontFoot.y)
+
+    this.drawBentArm(rig.backArm, backShoulder, backHand, sleeve, skin, pullAmount, -1)
+    this.drawBentArm(rig.frontArm, shoulder, hand, sleeve, skin, pullAmount, 1)
+
+    rig.backHand.setFillStyle(skin, 1)
+    rig.frontHand.setFillStyle(skin, 1)
+    rig.body.setFillStyle(cloak, 0.98)
+  }
+
+  private drawBentArm(
+    graphics: Phaser.GameObjects.Graphics,
+    shoulder: { x: number; y: number },
+    hand: { x: number; y: number },
+    sleeve: number,
+    skin: number,
+    pullAmount: number,
+    side: number,
+  ): void {
+    const elbow = {
+      x: Phaser.Math.Linear(shoulder.x, hand.x, 0.48) + side * (8 + pullAmount * 8),
+      y: Phaser.Math.Linear(shoulder.y, hand.y, 0.48) + 7 - pullAmount * 9,
+    }
+
+    graphics.clear()
+    graphics.lineStyle(8, sleeve, 0.95)
+    graphics.lineBetween(shoulder.x, shoulder.y, elbow.x, elbow.y)
+    graphics.lineBetween(elbow.x, elbow.y, hand.x, hand.y)
+    graphics.lineStyle(4, skin, 0.92)
+    graphics.lineBetween(elbow.x, elbow.y, hand.x, hand.y)
+  }
+
+  private getHeroHandPosition(): { x: number; y: number } | null {
+    const rig = this.slingshot?.heroRig
+    if (!rig) {
+      return null
+    }
+
+    const localX = rig.frontHand.x
+    const localY = rig.frontHand.y
+    const rotation = rig.container.rotation
+    const cos = Math.cos(rotation)
+    const sin = Math.sin(rotation)
+
+    return {
+      x: rig.container.x + localX * cos - localY * sin,
+      y: rig.container.y + localX * sin + localY * cos,
+    }
+  }
+
   private refreshDragGuide(): void {
     if (!this.slingshot) {
       return
@@ -1462,6 +1623,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.slingshot.dragGuide.setDepth(12)
     this.slingshot.dragGuide.lineStyle(2, parseColor(this.blueprint.palette.accentAlt), 0.2)
     this.slingshot.dragGuide.strokeCircle(this.slingshot.anchor.x, this.slingshot.anchor.y, 64)
+
     const projectile = this.slingshot.projectile
     if (!projectile) {
       return
@@ -1469,32 +1631,90 @@ class GeneratedGameScene extends Phaser.Scene {
 
     const forkTop = { x: this.slingshot.anchor.x - 12, y: this.slingshot.anchor.y - 38 }
     const forkBottom = { x: this.slingshot.anchor.x + 14, y: this.slingshot.anchor.y - 20 }
-    this.slingshot.dragGuide.lineStyle(5, parseColor(this.blueprint.palette.accent), 0.42)
-    this.slingshot.dragGuide.lineBetween(forkTop.x, forkTop.y, projectile.x, projectile.y)
-    this.slingshot.dragGuide.lineStyle(4, parseColor(this.blueprint.palette.accentAlt), 0.46)
-    this.slingshot.dragGuide.lineBetween(forkBottom.x, forkBottom.y, projectile.x, projectile.y)
+    const pull = this.calculateSlingshotPull(projectile)
 
-    if (this.slingshot.heroArt && !this.slingshot.projectileLaunched) {
-      const handX = this.slingshot.heroArt.x + 38
-      const handY = this.slingshot.heroArt.y - 64
-      this.slingshot.dragGuide.lineStyle(2, parseColor(this.blueprint.palette.accent), 0.3)
-      this.slingshot.dragGuide.lineBetween(handX, handY, projectile.x, projectile.y)
-      this.slingshot.dragGuide.fillStyle(parseColor(this.blueprint.palette.accent), 0.7)
-      this.slingshot.dragGuide.fillCircle(handX, handY, 4)
+    if (this.slingshot.projectileLaunched) {
+      this.drawElasticRecoil(forkTop, forkBottom)
+      return
     }
 
-    this.slingshot.dragGuide.lineStyle(2, parseColor(this.blueprint.palette.accentAlt), 0.36)
-    this.slingshot.dragGuide.lineBetween(
-      this.slingshot.anchor.x,
-      this.slingshot.anchor.y,
-      projectile.x,
-      projectile.y,
-    )
+    const tension = Phaser.Math.Clamp(pull.length() / 110, 0, 1)
+    this.drawElasticBand(forkTop, projectile, 5, this.blueprint.palette.accent, 0.6, tension, 0)
+    this.drawElasticBand(forkBottom, projectile, 4, this.blueprint.palette.accentAlt, 0.62, tension, Math.PI * 0.8)
 
-    const pull = this.calculateSlingshotPull(projectile)
+    const heldHand = this.getHeroHandPosition()
+    if (heldHand) {
+      this.slingshot.dragGuide.lineStyle(3, parseColor(this.blueprint.palette.accent), 0.38)
+      this.slingshot.dragGuide.lineBetween(heldHand.x, heldHand.y, projectile.x, projectile.y)
+    }
 
     if (pull.length() > 14) {
       this.drawPredictedSlingshotTrajectory(projectile)
+    }
+  }
+
+  private drawElasticRecoil(
+    forkTop: { x: number; y: number },
+    forkBottom: { x: number; y: number },
+  ): void {
+    if (!this.slingshot?.elasticSnap) {
+      return
+    }
+
+    const elapsed = this.time.now - this.slingshot.elasticSnap.startedAt
+    const duration = 320
+    if (elapsed > duration) {
+      this.slingshot.elasticSnap = null
+      return
+    }
+
+    const progress = Phaser.Math.Clamp(elapsed / duration, 0, 1)
+    const spring = Math.sin(progress * Math.PI * 5) * (1 - progress)
+    const snapPoint = {
+      x: this.slingshot.anchor.x + this.slingshot.elasticSnap.pullX * (1 - progress) * 0.22 + spring * 16,
+      y: this.slingshot.anchor.y + this.slingshot.elasticSnap.pullY * (1 - progress) * 0.18 - Math.abs(spring) * 10,
+    }
+
+    this.drawElasticBand(forkTop, snapPoint, 5, this.blueprint.palette.accent, 0.42 * (1 - progress), 0.12, 0)
+    this.drawElasticBand(forkBottom, snapPoint, 4, this.blueprint.palette.accentAlt, 0.44 * (1 - progress), 0.12, 1.6)
+  }
+
+  private drawElasticBand(
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    thickness: number,
+    color: string,
+    alpha: number,
+    tension: number,
+    phase: number,
+  ): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    const segments = 18
+    const dx = end.x - start.x
+    const dy = end.y - start.y
+    const length = Math.max(1, Math.hypot(dx, dy))
+    const normalX = -dy / length
+    const normalY = dx / length
+    const slack = (1 - tension) * 8
+    const tremble = Math.sin(this.time.now * 0.045 + phase) * (2.2 - tension * 1.3)
+    let previousX = start.x
+    let previousY = start.y
+
+    this.slingshot.dragGuide.lineStyle(thickness, parseColor(color), alpha)
+
+    for (let step = 1; step <= segments; step += 1) {
+      const t = step / segments
+      const arc = Math.sin(Math.PI * t)
+      const wave = Math.sin(t * Math.PI * 3 + phase + this.time.now * 0.035)
+      const offset = arc * (slack + tremble + wave * 1.2)
+      const x = Phaser.Math.Linear(start.x, end.x, t) + normalX * offset
+      const y = Phaser.Math.Linear(start.y, end.y, t) + normalY * offset + arc * slack * 0.45
+      this.slingshot.dragGuide.lineBetween(previousX, previousY, x, y)
+      previousX = x
+      previousY = y
     }
   }
 
@@ -1527,28 +1747,42 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private syncSlingshotHero(): void {
-    if (!this.slingshot?.heroArt) {
+    if (!this.slingshot?.heroRig) {
       return
     }
 
-    const hero = this.slingshot.heroArt
+    const rig = this.slingshot.heroRig
     const projectile = this.slingshot.projectile
+    const recoilProgress =
+      this.slingshot.elasticSnap && this.slingshot.projectileLaunched
+        ? Phaser.Math.Clamp((this.time.now - this.slingshot.elasticSnap.startedAt) / 320, 0, 1)
+        : 1
 
     if (!projectile || this.slingshot.projectileLaunched) {
-      hero.setPosition(
-        Phaser.Math.Linear(hero.x, this.slingshot.heroBase.x, 0.2),
-        Phaser.Math.Linear(hero.y, this.slingshot.heroBase.y, 0.2),
+      rig.container.setPosition(
+        Phaser.Math.Linear(rig.container.x, this.slingshot.heroBase.x - (1 - recoilProgress) * 10, 0.2),
+        Phaser.Math.Linear(rig.container.y, this.slingshot.heroBase.y + Math.sin(this.time.now * 0.012) * 1.4, 0.2),
       )
-      hero.setRotation(Phaser.Math.Linear(hero.rotation, 0, 0.2))
+      rig.container.setRotation(Phaser.Math.Linear(rig.container.rotation, 0, 0.2))
+      this.drawSlingshotHeroRig(rig, 0, 'idle')
       return
     }
 
-    const pullOffsetX = Phaser.Math.Clamp((projectile.x - this.slingshot.anchor.x) * 0.34, -36, 18)
+    const pullOffsetX = Phaser.Math.Clamp((projectile.x - this.slingshot.anchor.x) * 0.34, -42, 18)
     const pullOffsetY = Phaser.Math.Clamp((projectile.y - this.slingshot.anchor.y) * 0.12, -10, 14)
-    const walkBob = Math.sin(this.time.now * 0.018) * Math.min(5, Math.abs(pullOffsetX) * 0.16)
+    const pullAmount = Phaser.Math.Clamp(
+      Phaser.Math.Distance.Between(projectile.x, projectile.y, this.slingshot.anchor.x, this.slingshot.anchor.y) / 110,
+      0,
+      1,
+    )
+    const walkBob = Math.sin(this.time.now * 0.02) * Math.min(5, Math.abs(pullOffsetX) * 0.16)
 
-    hero.setPosition(this.slingshot.heroBase.x + pullOffsetX, this.slingshot.heroBase.y + pullOffsetY + walkBob)
-    hero.setRotation(Phaser.Math.Clamp(pullOffsetX * 0.004, -0.13, 0.08))
+    rig.container.setPosition(this.slingshot.heroBase.x + pullOffsetX, this.slingshot.heroBase.y + pullOffsetY + walkBob)
+    rig.container.setRotation(Phaser.Math.Clamp(pullOffsetX * 0.004, -0.16, 0.08))
+    this.drawSlingshotHeroRig(rig, pullAmount, 'pull', {
+      x: projectile.x - rig.container.x,
+      y: projectile.y - rig.container.y,
+    })
   }
 
   private updateMatterTargets(): void {
@@ -1626,7 +1860,6 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.heroLauncher, ASTRAL_CUTOUT_TEXTURES.heroLauncher)
     this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.projectile, ASTRAL_CUTOUT_TEXTURES.projectile)
     this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.target, ASTRAL_CUTOUT_TEXTURES.target)
     this.createEdgeKeyedCutoutTexture(ASTRAL_TEXTURES.woodBeam, ASTRAL_CUTOUT_TEXTURES.woodBeam)
