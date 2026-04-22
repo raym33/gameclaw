@@ -1,7 +1,18 @@
 import { startTransition, useEffect, useMemo, useState } from 'react'
 
-import type { GenerationResult } from '../shared/game'
-import { TEMPLATE_LABELS } from '../shared/game'
+import {
+  CAMERA_LABELS,
+  COMBAT_LABELS,
+  MOVEMENT_LABELS,
+  OBJECTIVE_LABELS,
+  PHYSICS_LABELS,
+  RUNTIME_LABELS,
+  SPECIAL_LABELS,
+  SUPPORT_LEVEL_LABELS,
+  WORLD_LAYOUT_LABELS,
+  deriveRuntimeProfile,
+  type GenerationResult,
+} from '../shared/game'
 import { GameCanvas } from './components/GameCanvas'
 import { requestGeneration } from './lib/api'
 
@@ -13,11 +24,11 @@ type UploadItem = {
 
 const PROMPT_SEEDS = [
   'Sube bocetos de personajes, mapas, HUDs, sprites o fotos de libreta.',
-  'Añade notas como loop principal, tono, referencias o mecánicas clave.',
-  'Gameclaw analiza el material y te devuelve un prototipo jugable inmediato.',
+  'Pide algo concreto o raro: runner, metroidvania, slingshot physics, ideas temporales.',
+  'Gameclaw lo colapsa a un vertical slice estable en vez de inventar un proyecto roto.',
 ]
 
-const EXAMPLE_NOTES = `Action roguelite con vista cenital. Quiero sensación de reliquias antiguas, ritmo rápido y una habilidad especial tipo pulso que limpie espacio cuando te rodean.`
+const EXAMPLE_NOTES = `Quiero una mezcla rara: plataformas laterales con reliquias antiguas y una habilidad de rebobinado corto cuando fallas un salto. Si pido algo estilo Angry Birds o destrucción física, quiero que el sistema cambie de runtime y use cuerpos rígidos de verdad.`
 
 export default function App() {
   const [uploads, setUploads] = useState<UploadItem[]>([])
@@ -40,6 +51,23 @@ export default function App() {
 
     return `${uploads.length} referencia${uploads.length === 1 ? '' : 's'} lista${uploads.length === 1 ? '' : 's'}`
   }, [uploads.length])
+
+  const systemEntries = useMemo(() => {
+    if (!result) {
+      return []
+    }
+
+    const { systems } = result.blueprint
+    return [
+      ['Camera', CAMERA_LABELS[systems.camera]],
+      ['Movement', MOVEMENT_LABELS[systems.movement]],
+      ['Physics', PHYSICS_LABELS[systems.physics]],
+      ['Combat', COMBAT_LABELS[systems.combat]],
+      ['Objective', OBJECTIVE_LABELS[systems.objective]],
+      ['Layout', WORLD_LAYOUT_LABELS[systems.worldLayout]],
+      ['Special', SPECIAL_LABELS[systems.specialMechanic]],
+    ] as const
+  }, [result])
 
   async function handleGenerate() {
     if (uploads.length === 0 || busy) {
@@ -99,12 +127,12 @@ export default function App() {
     <main className="page-shell">
       <section className="hero-panel">
         <div className="hero-copy">
-          <span className="eyebrow">GAMECLAW / sketch-to-prototype</span>
-          <h1>Sube el caos visual. Baja un videojuego jugable.</h1>
+          <span className="eyebrow">GAMECLAW / system-driven prototyping</span>
+          <h1>De ideas raras a vertical slices estables.</h1>
           <p className="hero-lede">
-            Este repo convierte fotos de bocetos, capturas, sprites y notas sueltas en un blueprint
-            estructurado y un prototipo en Phaser. La primera versión es deliberadamente fiable:
-            usa plantillas de juego estables en vez de prometer generación infinita y rota.
+            Gameclaw ya no depende de tres templates cerrados. Ahora convierte las referencias en un
+            stack de sistemas jugables, decide el runtime adecuado y, si la idea es demasiado rara,
+            la aproxima con honestidad en vez de prometer magia.
           </p>
           <div className="hero-list">
             {PROMPT_SEEDS.map((line) => (
@@ -115,16 +143,16 @@ export default function App() {
 
         <div className="hero-stats">
           <div className="stat-card">
-            <span>Motor</span>
-            <strong>OpenAI Responses API</strong>
+            <span>Arquitectura</span>
+            <strong>Composable systems</strong>
           </div>
           <div className="stat-card">
-            <span>Salida</span>
-            <strong>Blueprint + prototipo</strong>
+            <span>Physics</span>
+            <strong>Scripted + Matter runtime</strong>
           </div>
           <div className="stat-card">
-            <span>Runtime</span>
-            <strong>React + Phaser + Express</strong>
+            <span>Modo raro</span>
+            <strong>Hybrid / approximate support</strong>
           </div>
         </div>
       </section>
@@ -161,8 +189,8 @@ export default function App() {
             />
             <span className="dropzone-title">Arrastra imágenes o pulsa para subir</span>
             <span className="dropzone-copy">
-              JPG, PNG, WEBP o GIF. Hasta 12 referencias. Cuanto más mezcladas estén, mejor sale el
-              concepto.
+              JPG, PNG, WEBP o GIF. Hasta 12 referencias. Cuanta más mezcla haya entre boceto,
+              sprites, UI y libreta, mejor sale la lectura del sistema.
             </span>
           </label>
 
@@ -186,17 +214,21 @@ export default function App() {
             <textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder="Ej: metroidvania con cámara lateral, protagonista hacker, estética industrial..."
+              placeholder="Ej: runner con destrucción física, roguelite musical, plataforma temporal..."
             />
           </label>
 
           <div className="action-row">
-            <button className="primary-button" disabled={uploads.length === 0 || busy} onClick={() => void handleGenerate()}>
-              {busy ? 'Generando prototipo...' : 'Generar videojuego'}
+            <button
+              className="primary-button"
+              disabled={uploads.length === 0 || busy}
+              onClick={() => void handleGenerate()}
+            >
+              {busy ? 'Generando vertical slice...' : 'Generar videojuego'}
             </button>
             <p className="microcopy">
-              Si no configuras `OPENAI_API_KEY`, la app cae en modo local de demostración para que el
-              repo siga siendo arrancable.
+              Si no configuras `OPENAI_API_KEY`, la app cae en modo fallback y sigue generando un
+              slice local usando inferencia por texto.
             </p>
           </div>
 
@@ -223,7 +255,14 @@ export default function App() {
                   <h3>{result.blueprint.title}</h3>
                   <p>{result.blueprint.tagline}</p>
                 </div>
-                <div className="template-pill">{TEMPLATE_LABELS[result.blueprint.template]}</div>
+                <div className="result-badges">
+                  <div className="template-pill">
+                    {RUNTIME_LABELS[deriveRuntimeProfile(result.blueprint.systems)]}
+                  </div>
+                  <div className="template-pill secondary">
+                    {SUPPORT_LEVEL_LABELS[result.blueprint.supportLevel]}
+                  </div>
+                </div>
               </div>
 
               <div className="game-frame">
@@ -240,9 +279,23 @@ export default function App() {
                   <strong>{result.blueprint.worldSummary}</strong>
                 </article>
                 <article className="insight-card">
-                  <span>Style</span>
-                  <strong>{result.blueprint.visualStyle}</strong>
+                  <span>Novelty Hook</span>
+                  <strong>{result.blueprint.noveltyHook}</strong>
                 </article>
+              </div>
+
+              <div className="detail-card single-card">
+                <span className="detail-kicker">Approximation Strategy</span>
+                <p>{result.blueprint.approximationStrategy}</p>
+              </div>
+
+              <div className="system-grid">
+                {systemEntries.map(([label, value]) => (
+                  <article className="system-card" key={label}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                  </article>
+                ))}
               </div>
 
               <div className="two-column">
@@ -259,6 +312,26 @@ export default function App() {
                   <span className="detail-kicker">Mechanics</span>
                   <ul>
                     {result.blueprint.mechanicHighlights.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </article>
+              </div>
+
+              <div className="two-column">
+                <article className="detail-card">
+                  <span className="detail-kicker">Implementation Notes</span>
+                  <ul>
+                    {result.blueprint.implementationNotes.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </article>
+
+                <article className="detail-card">
+                  <span className="detail-kicker">Production Backlog</span>
+                  <ul>
+                    {result.blueprint.productionBacklog.map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
@@ -297,8 +370,8 @@ export default function App() {
             <div className="empty-state">
               <h3>El prototipo aparecerá aquí</h3>
               <p>
-                Cuando generes una partida, verás el canvas jugable, el template elegido, los
-                momentos de nivel y los prompts de assets.
+                Verás el runtime elegido, el stack de sistemas, el nivel de soporte y el vertical
+                slice jugable.
               </p>
             </div>
           )}
