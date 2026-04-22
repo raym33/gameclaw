@@ -145,3 +145,5 @@ npm run start
 - `lmstudio` uses the OpenAI-compatible `Responses` shape, so it works well for multimodal structured output.
 - `ollama` uses `/api/chat` with image attachments and a JSON schema response format.
 - If the configured AI backend fails at runtime, the server falls back to the local demo blueprint and adds a warning to the response instead of crashing the prototype flow.
+
+- MIT license.
