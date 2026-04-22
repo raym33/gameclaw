@@ -263,7 +263,8 @@ button {
 }
 
 .upload-card button,
-.primary-button {
+.primary-button,
+.secondary-button {
   border: 0;
   border-radius: 16px;
 }
@@ -310,7 +311,16 @@ button {
   font-weight: 700;
 }
 
-.primary-button:disabled {
+.secondary-button {
+  padding: 13px 18px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -450,6 +460,10 @@ button {
   place-items: center;
   min-height: 520px;
   text-align: center;
+}
+
+.empty-state .secondary-button {
+  margin-top: 14px;
 }
 
 @media (max-width: 1100px) {

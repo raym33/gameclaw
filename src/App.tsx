@@ -14,7 +14,7 @@ import {
   type GenerationResult,
 } from '../shared/game'
 import { GameCanvas } from './components/GameCanvas'
-import { requestGeneration } from './lib/api'
+import { requestAstralOrchardDemo, requestGeneration } from './lib/api'
 
 type UploadItem = {
   file: File
@@ -88,6 +88,26 @@ export default function App() {
       })
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'No se pudo generar el prototipo.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleLoadDemo() {
+    if (busy) {
+      return
+    }
+
+    setBusy(true)
+    setError(null)
+
+    try {
+      const generation = await requestAstralOrchardDemo()
+      startTransition(() => {
+        setResult(generation)
+      })
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'No se pudo cargar la demo.')
     } finally {
       setBusy(false)
     }
@@ -226,6 +246,9 @@ export default function App() {
             >
               {busy ? 'Generando vertical slice...' : 'Generar videojuego'}
             </button>
+            <button className="secondary-button" disabled={busy} onClick={() => void handleLoadDemo()}>
+              Cargar demo Astral Orchard
+            </button>
             <p className="microcopy">
               Gameclaw puede usar `Ollama` local o un backend `OpenAI-compatible` como `LM Studio`.
               Si ninguno responde, cae en fallback y sigue generando un slice local.
@@ -243,7 +266,7 @@ export default function App() {
             </div>
             {result ? (
               <span className={`hint-chip ${result.generationSource}`}>
-                {result.generationSource === 'ai' ? result.providerLabel : 'Fallback'}
+                {result.providerLabel}
               </span>
             ) : null}
           </div>
@@ -373,6 +396,9 @@ export default function App() {
                 Verás el runtime elegido, el stack de sistemas, el nivel de soporte y el vertical
                 slice jugable.
               </p>
+              <button className="secondary-button" disabled={busy} onClick={() => void handleLoadDemo()}>
+                Probar Astral Orchard
+              </button>
             </div>
           )}
         </div>

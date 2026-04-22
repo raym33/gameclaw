@@ -37,6 +37,44 @@ type MatterShape = ShapeObject & {
   body: MatterJS.BodyType
 }
 
+type SlingshotMaterial = 'wood' | 'glass' | 'brass'
+
+type SlingshotBlock = {
+  shape: MatterShape
+  material: SlingshotMaterial
+  collapseLeft: number
+  collapseRight: number
+  collapseBottom: number
+}
+
+type SlingshotTarget = {
+  shape: MatterShape
+  integrity: number
+}
+
+type SlingshotBlockDefinition = {
+  x: number
+  y: number
+  width: number
+  height: number
+  material: SlingshotMaterial
+}
+
+type SlingshotTargetDefinition = {
+  x: number
+  y: number
+  radius?: number
+  integrity?: number
+}
+
+type SlingshotLevel = {
+  name: string
+  shots: number
+  note: string
+  blocks: SlingshotBlockDefinition[]
+  targets: SlingshotTargetDefinition[]
+}
+
 type SlingshotState = {
   anchor: { x: number; y: number }
   dragGuide: Phaser.GameObjects.Graphics
@@ -44,10 +82,74 @@ type SlingshotState = {
   projectileLaunched: boolean
   dragging: boolean
   shotsRemaining: number
-  blocks: MatterShape[]
-  targets: MatterShape[]
+  blocks: SlingshotBlock[]
+  targets: SlingshotTarget[]
   lastReleaseAt: number
+  levelIndex: number
+  levels: SlingshotLevel[]
+  transitioning: boolean
+  levelBadge: Phaser.GameObjects.Text
 }
+
+const SLINGSHOT_LEVELS: SlingshotLevel[] = [
+  {
+    name: 'Lantern Nursery',
+    shots: 5,
+    note: 'Open the glass canopy and release the first orbit cores.',
+    blocks: [
+      { x: 650, y: GAME_HEIGHT - 96, width: 64, height: 24, material: 'wood' },
+      { x: 720, y: GAME_HEIGHT - 96, width: 64, height: 24, material: 'wood' },
+      { x: 650, y: GAME_HEIGHT - 134, width: 22, height: 68, material: 'glass' },
+      { x: 720, y: GAME_HEIGHT - 134, width: 22, height: 68, material: 'glass' },
+      { x: 685, y: GAME_HEIGHT - 178, width: 118, height: 20, material: 'brass' },
+      { x: 756, y: GAME_HEIGHT - 166, width: 26, height: 110, material: 'wood' },
+    ],
+    targets: [
+      { x: 682, y: GAME_HEIGHT - 210, integrity: 3.7 },
+      { x: 725, y: GAME_HEIGHT - 210, integrity: 3.7 },
+    ],
+  },
+  {
+    name: 'Observatory Bridge',
+    shots: 4,
+    note: 'Kick the support legs and let the bridge twist itself apart.',
+    blocks: [
+      { x: 618, y: GAME_HEIGHT - 100, width: 72, height: 22, material: 'glass' },
+      { x: 706, y: GAME_HEIGHT - 100, width: 72, height: 22, material: 'glass' },
+      { x: 794, y: GAME_HEIGHT - 100, width: 72, height: 22, material: 'glass' },
+      { x: 650, y: GAME_HEIGHT - 144, width: 22, height: 86, material: 'wood' },
+      { x: 734, y: GAME_HEIGHT - 144, width: 22, height: 86, material: 'wood' },
+      { x: 696, y: GAME_HEIGHT - 188, width: 134, height: 20, material: 'brass' },
+      { x: 776, y: GAME_HEIGHT - 164, width: 22, height: 112, material: 'wood' },
+      { x: 610, y: GAME_HEIGHT - 162, width: 22, height: 112, material: 'wood' },
+    ],
+    targets: [
+      { x: 698, y: GAME_HEIGHT - 218, integrity: 4.2 },
+      { x: 775, y: GAME_HEIGHT - 130, integrity: 4.8 },
+    ],
+  },
+  {
+    name: 'Celestial Harvest',
+    shots: 5,
+    note: 'The brass cage is tougher. Create a chain reaction instead of brute force.',
+    blocks: [
+      { x: 650, y: GAME_HEIGHT - 94, width: 70, height: 22, material: 'brass' },
+      { x: 728, y: GAME_HEIGHT - 94, width: 70, height: 22, material: 'brass' },
+      { x: 806, y: GAME_HEIGHT - 94, width: 70, height: 22, material: 'brass' },
+      { x: 686, y: GAME_HEIGHT - 138, width: 24, height: 82, material: 'glass' },
+      { x: 770, y: GAME_HEIGHT - 138, width: 24, height: 82, material: 'glass' },
+      { x: 728, y: GAME_HEIGHT - 182, width: 158, height: 20, material: 'wood' },
+      { x: 728, y: GAME_HEIGHT - 228, width: 24, height: 72, material: 'brass' },
+      { x: 688, y: GAME_HEIGHT - 266, width: 118, height: 18, material: 'glass' },
+      { x: 808, y: GAME_HEIGHT - 218, width: 22, height: 104, material: 'wood' },
+    ],
+    targets: [
+      { x: 690, y: GAME_HEIGHT - 292, integrity: 3.9 },
+      { x: 770, y: GAME_HEIGHT - 202, integrity: 5.1 },
+      { x: 812, y: GAME_HEIGHT - 250, integrity: 4.9 },
+    ],
+  },
+]
 
 export function createGameConfig(
   target: HTMLDivElement,
@@ -266,6 +368,18 @@ class GeneratedGameScene extends Phaser.Scene {
     const graphics = this.add.graphics()
     graphics.fillStyle(parseColor(palette.bg), 1)
     graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
+
+    if (this.runtimeProfile === 'slingshot-destruction') {
+      graphics.fillStyle(parseColor(palette.accent), 0.08)
+      graphics.fillCircle(160, 120, 76)
+      graphics.fillStyle(parseColor(palette.accentAlt), 0.12)
+      graphics.fillCircle(172, 112, 54)
+
+      for (let i = 0; i < 6; i += 1) {
+        graphics.fillStyle(parseColor(palette.accentAlt), 0.06 + i * 0.01)
+        graphics.fillEllipse(120 + i * 140, GAME_HEIGHT - 80 - (i % 2) * 18, 180, 52)
+      }
+    }
 
     graphics.fillStyle(parseColor(palette.surface), 0.45)
     for (let i = 0; i < 9; i += 1) {
@@ -512,21 +626,26 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private createSlingshotDestruction(): void {
-    this.objectiveText.setText([
-      `${this.blueprint.hero.name}: ${this.blueprint.noveltyHook}`,
-      this.blueprint.winCondition,
-    ])
-
     this.slingshot = {
       anchor: { x: 140, y: GAME_HEIGHT - 120 },
       dragGuide: this.add.graphics(),
       projectile: null,
       projectileLaunched: false,
       dragging: false,
-      shotsRemaining: 5,
+      shotsRemaining: 0,
       blocks: [],
       targets: [],
       lastReleaseAt: 0,
+      levelIndex: 0,
+      levels: SLINGSHOT_LEVELS,
+      transitioning: false,
+      levelBadge: this.add
+        .text(GAME_WIDTH - 28, 24, '', {
+          fontFamily: 'IBM Plex Mono, monospace',
+          fontSize: '12px',
+          color: this.blueprint.palette.accentAlt,
+        })
+        .setOrigin(1, 0),
     }
 
     this.matter.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT)
@@ -535,8 +654,7 @@ class GeneratedGameScene extends Phaser.Scene {
     const launcher = this.add.rectangle(120, GAME_HEIGHT - 105, 18, 72, parseColor(this.blueprint.palette.accent))
     this.matter.add.gameObject(launcher, { isStatic: true })
 
-    this.buildFortress()
-    this.spawnSlingshotProjectile()
+    this.loadSlingshotLevel(0)
     this.refreshDragGuide()
 
     this.input.on('pointerdown', this.handlePointerDown, this)
@@ -552,9 +670,10 @@ class GeneratedGameScene extends Phaser.Scene {
     this.refreshDragGuide()
     this.updateMatterTargets()
     this.updateMatterBlocks()
+    this.updateFloatingShards()
 
-    if (this.slingshot.targets.length === 0) {
-      this.finishGame(true, this.blueprint.winCondition)
+    if (this.slingshot.targets.length === 0 && !this.slingshot.transitioning) {
+      this.advanceSlingshotLevel()
       return
     }
 
@@ -572,9 +691,9 @@ class GeneratedGameScene extends Phaser.Scene {
         this.slingshot.projectile = null
         this.slingshot.projectileLaunched = false
 
-        if (this.slingshot.shotsRemaining > 0) {
+        if (this.slingshot.shotsRemaining > 0 && this.slingshot.targets.length > 0) {
           this.time.delayedCall(350, () => {
-            if (!this.gameEnded) {
+            if (!this.gameEnded && this.slingshot && this.slingshot.targets.length > 0) {
               this.spawnSlingshotProjectile()
             }
           })
@@ -914,11 +1033,17 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    const shard = this.add.circle(x, y, 6, parseColor(this.blueprint.palette.accent), 0.95)
+    const radius = this.runtimeProfile === 'slingshot-destruction' ? 4 : 6
+    const color =
+      this.runtimeProfile === 'slingshot-destruction'
+        ? parseColor(this.blueprint.palette.accentAlt)
+        : parseColor(this.blueprint.palette.accent)
+
+    const shard = this.add.circle(x, y, radius, color, 0.95)
     this.shards.push({
       shape: shard,
       vx: Phaser.Math.Between(-20, 20),
-      vy: Phaser.Math.Between(-20, 20),
+      vy: Phaser.Math.Between(-20, 20) - (this.runtimeProfile === 'slingshot-destruction' ? 18 : 0),
     })
   }
 
@@ -953,44 +1078,120 @@ class GeneratedGameScene extends Phaser.Scene {
     this.shards.push({ shape: relic, vx: 0, vy: 0 })
   }
 
-  private buildFortress(): void {
-    const blockColor = parseColor(this.blueprint.palette.surface)
-    const targetColor = parseColor(this.blueprint.palette.danger)
+  private loadSlingshotLevel(levelIndex: number): void {
+    if (!this.slingshot) {
+      return
+    }
 
-    const blockLayout = [
-      [640, GAME_HEIGHT - 96, 60, 22],
-      [705, GAME_HEIGHT - 96, 60, 22],
-      [640, GAME_HEIGHT - 126, 22, 60],
-      [705, GAME_HEIGHT - 126, 22, 60],
-      [672, GAME_HEIGHT - 162, 110, 20],
-      [735, GAME_HEIGHT - 162, 110, 20],
-    ]
+    const level = this.slingshot.levels[levelIndex]
+    this.slingshot.levelIndex = levelIndex
+    this.slingshot.transitioning = false
+    this.slingshot.levelBadge.setText(`LEVEL ${levelIndex + 1} / ${this.slingshot.levels.length}  ${level.name.toUpperCase()}`)
+    this.objectiveText.setText([
+      `${this.blueprint.hero.name}: ${level.note}`,
+      `Break the structure, free every orbit core, and preserve shots for the next chamber.`,
+    ])
 
-    for (const [x, y, width, height] of blockLayout) {
-      const block = this.add.rectangle(x, y, width, height, blockColor)
-      block.setStrokeStyle(2, parseColor(this.blueprint.palette.text), 0.22)
+    this.clearSlingshotActors()
+    this.slingshot.shotsRemaining += level.shots
+
+    for (const blockDef of level.blocks) {
+      const block = this.add.rectangle(
+        blockDef.x,
+        blockDef.y,
+        blockDef.width,
+        blockDef.height,
+        parseColor(slingshotMaterialColor(blockDef.material, this.blueprint.palette)),
+      )
+      block.setStrokeStyle(2, parseColor(this.blueprint.palette.text), blockDef.material === 'glass' ? 0.3 : 0.18)
       const gameObject = this.matter.add.gameObject(block, {
         friction: this.blueprint.physics.friction,
-        restitution: this.blueprint.physics.bounce * 0.4,
+        restitution: blockDef.material === 'glass' ? this.blueprint.physics.bounce * 0.22 : this.blueprint.physics.bounce * 0.38,
       }) as MatterShape
-      this.slingshot?.blocks.push(gameObject)
+
+      this.slingshot.blocks.push({
+        shape: gameObject,
+        material: blockDef.material,
+        collapseLeft: blockDef.material === 'glass' ? 420 : 360,
+        collapseRight: GAME_WIDTH + 120,
+        collapseBottom: GAME_HEIGHT + 60,
+      })
     }
 
-    const targets = [
-      [672, GAME_HEIGHT - 196],
-      [736, GAME_HEIGHT - 196],
-      [704, GAME_HEIGHT - 232],
-    ]
-
-    for (const [x, y] of targets) {
-      const target = this.add.circle(x, y, 16, targetColor)
-      target.setStrokeStyle(2, parseColor(this.blueprint.palette.text), 0.45)
+    for (const targetDef of level.targets) {
+      const target = this.add.circle(
+        targetDef.x,
+        targetDef.y,
+        targetDef.radius ?? 16,
+        parseColor(this.blueprint.palette.danger),
+      )
+      target.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.52)
       const gameObject = this.matter.add.gameObject(target, {
         friction: this.blueprint.physics.friction,
-        restitution: this.blueprint.physics.bounce * 0.2,
+        restitution: this.blueprint.physics.bounce * 0.15,
       }) as MatterShape
-      this.slingshot?.targets.push(gameObject)
+
+      this.slingshot.targets.push({
+        shape: gameObject,
+        integrity: targetDef.integrity ?? this.blueprint.physics.structuralIntegrity * 0.6,
+      })
     }
+
+    this.spawnSlingshotProjectile()
+    this.cameras.main.flash(180, 105, 210, 199, false)
+  }
+
+  private advanceSlingshotLevel(): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    if (this.slingshot.levelIndex >= this.slingshot.levels.length - 1) {
+      this.finishGame(true, `All observatory chambers collapsed. Final score ${this.score}.`)
+      return
+    }
+
+    this.slingshot.transitioning = true
+    this.clearSlingshotProjectile()
+    const nextLevel = this.slingshot.levels[this.slingshot.levelIndex + 1]
+    this.objectiveText.setText([
+      `Chamber cleared. The orchard opens ${nextLevel.name}.`,
+      `Next: ${nextLevel.note}`,
+    ])
+    this.statusText.setText(`Chamber ${this.slingshot.levelIndex + 1} cleared   Score ${this.score}`)
+    this.time.delayedCall(1100, () => {
+      if (!this.gameEnded) {
+        this.loadSlingshotLevel(this.slingshot!.levelIndex + 1)
+      }
+    })
+  }
+
+  private clearSlingshotActors(): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    for (const block of this.slingshot.blocks) {
+      block.shape.destroy()
+    }
+    for (const target of this.slingshot.targets) {
+      target.shape.destroy()
+    }
+
+    this.slingshot.blocks = []
+    this.slingshot.targets = []
+    this.clearSlingshotProjectile()
+  }
+
+  private clearSlingshotProjectile(): void {
+    if (!this.slingshot?.projectile) {
+      return
+    }
+
+    this.slingshot.projectile.destroy()
+    this.slingshot.projectile = null
+    this.slingshot.projectileLaunched = false
+    this.slingshot.dragging = false
   }
 
   private spawnSlingshotProjectile(): void {
@@ -1099,14 +1300,15 @@ class GeneratedGameScene extends Phaser.Scene {
 
     for (const target of [...this.slingshot.targets]) {
       const destroyed =
-        target.body.speed > this.blueprint.physics.structuralIntegrity * 0.55 ||
-        target.y > GAME_HEIGHT - 48 ||
-        target.x < 460 ||
-        target.x > GAME_WIDTH + 80
+        target.shape.body.speed > target.integrity ||
+        target.shape.y > GAME_HEIGHT - 48 ||
+        target.shape.x < 440 ||
+        target.shape.x > GAME_WIDTH + 80
 
       if (destroyed) {
         this.addScore(30)
-        target.destroy()
+        this.spawnShard(target.shape.x, target.shape.y)
+        target.shape.destroy()
         this.slingshot.targets.splice(this.slingshot.targets.indexOf(target), 1)
         this.cameras.main.shake(120, 0.005)
       }
@@ -1120,13 +1322,32 @@ class GeneratedGameScene extends Phaser.Scene {
 
     for (const block of [...this.slingshot.blocks]) {
       const collapsed =
-        block.y > GAME_HEIGHT + 60 ||
-        block.x > GAME_WIDTH + 120 ||
-        block.x < 360
+        block.shape.y > block.collapseBottom ||
+        block.shape.x > block.collapseRight ||
+        block.shape.x < block.collapseLeft
 
       if (collapsed) {
-        block.destroy()
+        if (block.material !== 'glass') {
+          this.spawnShard(block.shape.x, block.shape.y)
+        }
+        block.shape.destroy()
         this.slingshot.blocks.splice(this.slingshot.blocks.indexOf(block), 1)
+      }
+    }
+  }
+
+  private updateFloatingShards(): void {
+    const delta = this.game.loop.delta / 1000
+
+    for (const shard of [...this.shards]) {
+      shard.shape.x += shard.vx * delta
+      shard.shape.y += shard.vy * delta
+      shard.vy += 36 * delta
+      shard.shape.alpha = Math.max(0, shard.shape.alpha - delta * 1.35)
+
+      if (shard.shape.alpha <= 0.02 || shard.shape.y > GAME_HEIGHT + 40) {
+        shard.shape.destroy()
+        this.shards.splice(this.shards.indexOf(shard), 1)
       }
     }
   }
@@ -1137,8 +1358,9 @@ class GeneratedGameScene extends Phaser.Scene {
 
     if (this.runtimeProfile === 'slingshot-destruction') {
       const loadedShot = this.slingshot?.projectile ? 1 : 0
+      const levelLabel = this.slingshot ? `   Level ${this.slingshot.levelIndex + 1}/${this.slingshot.levels.length}` : ''
       this.statusText.setText(
-        `Targets ${this.slingshot?.targets.length ?? 0}   Shots ${(this.slingshot?.shotsRemaining ?? 0) + loadedShot}   Score ${this.score}`,
+        `Targets ${this.slingshot?.targets.length ?? 0}   Shots ${(this.slingshot?.shotsRemaining ?? 0) + loadedShot}   Score ${this.score}${levelLabel}`,
       )
       return
     }
@@ -1236,6 +1458,17 @@ function defaultTimerForProfile(profile: RuntimeProfile): number {
       return 0
     default:
       return 60
+  }
+}
+
+function slingshotMaterialColor(material: SlingshotMaterial, palette: GamePalette): string {
+  switch (material) {
+    case 'glass':
+      return palette.accentAlt
+    case 'brass':
+      return palette.accent
+    default:
+      return palette.surface
   }
 }
 

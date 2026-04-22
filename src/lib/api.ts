@@ -18,3 +18,14 @@ export async function requestGeneration(files: File[], notes: string): Promise<G
 
   return data
 }
+
+export async function requestAstralOrchardDemo(): Promise<GenerationResult> {
+  const response = await fetch('/api/demo/astral-orchard')
+  const data = (await response.json()) as GenerationResult | { error: string }
+
+  if (!response.ok || 'error' in data) {
+    throw new Error('error' in data ? data.error : 'No se pudo cargar la demo.')
+  }
+
+  return data
+}

@@ -5,6 +5,7 @@ import express from 'express'
 import multer from 'multer'
 
 import { buildFallbackBlueprint } from './blueprint'
+import { buildAstralOrchardDemoResult } from './demo'
 import { collectAIInputWarnings, generateBlueprintWithAI, hasAIConfig, resolveAIProvider } from './openai'
 import { persistRun } from './storage'
 import type { GenerationResult, StoredGeneration } from '../shared/game'
@@ -35,6 +36,16 @@ app.get('/api/health', (_request, response) => {
       model: provider.model ?? null,
     },
   })
+})
+
+app.get('/api/demo/astral-orchard', async (_request, response) => {
+  const result = buildAstralOrchardDemoResult()
+  await persistRun({
+    ...result,
+    notes: 'Curated local Astral Orchard demo',
+    files: [],
+  })
+  response.json(result)
 })
 
 app.post('/api/generate', upload.array('files', 12), async (request, response) => {
