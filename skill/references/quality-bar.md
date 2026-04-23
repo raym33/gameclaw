@@ -20,6 +20,7 @@ Do not spread effort across menus, lore, multiple unfinished modes, or broad arc
 - Movement must have acceleration, deceleration, anticipation, or recovery where appropriate.
 - Physics-based mechanics must be deterministic enough to learn.
 - Sprite scale, anchoring, and hit feedback must look intentional.
+- Asset coverage must be sufficient for the loop. One pretty image and one gameplay sprite is not enough if motion still reads badly.
 - HUD and helper text must support the loop instead of covering the action.
 - If the user asks for polished or sellable quality, do not leave placeholder primitives in the final presentation layer.
 
@@ -29,18 +30,21 @@ Do not spread effort across menus, lore, multiple unfinished modes, or broad arc
 2. Input feel
 3. Motion readability
 4. Physics reliability
-5. Art consistency
-6. Juice: particles, flash, recoil, hit stop, camera response
+5. Asset coverage
+6. Art consistency
+7. Juice: particles, flash, recoil, hit stop, camera response
 
 ## What “Prototype-Looking” Usually Means
 
 - shapes instead of real sprites
+- one hero pose reused across idle, movement, action, and recovery
 - no anticipation or recovery on actions
 - camera that is static, jittery, or badly framed
 - hit reactions that only change numbers
 - trajectory previews that do not match the real shot
 - friction, gravity, or drag values that feel arbitrary
 - unreadable or oversized debug-style HUD
+- generated art exists but is not actually integrated into the gameplay layer
 - too many systems, none of them tuned
 
 Fix those before adding more features.

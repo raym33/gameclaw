@@ -6,6 +6,7 @@ Use this when the user cares about the game resembling uploaded sketches, sprite
 
 - Use original sprites or curated raster assets before procedural shapes.
 - If final sprites are missing, generate or edit raster assets and move the selected finals into the repo instead of leaving the game on primitives.
+- If the slice is meant to look polished, generate enough raster coverage for motion, props, and feedback instead of relying on one-off hero art.
 - Keep Matter bodies invisible or subtle; attach sprites to bodies.
 - Do not use procedural character rigs unless explicitly requested.
 - If a sprite has a baked background, crop or key it out instead of displaying boxes.
@@ -15,8 +16,16 @@ Use this when the user cares about the game resembling uploaded sketches, sprite
 
 - Character pose, action origin, and collision body should line up.
 - Use clear idle, locomotion, action, and recovery states when the character is frequently on screen.
+- If state changes still pop badly, add more sprite coverage rather than blending incompatible images.
 - Keep sprite scale consistent across all gameplay objects.
 - Prefer one clear art direction per slice; avoid mixing incompatible visual styles by accident.
+
+## Minimum Coverage Heuristic
+
+- Main character: idle, locomotion, anticipation/brace, action peak, recovery.
+- Frequently aimed or thrown object: loaded, flying, impact feedback.
+- Core interactables: final art for targets, enemies, breakables, and key props.
+- Presentation layer: any always-on HUD surface should feel designed, not temporary.
 
 ## Pixel-Perfect Rules
 
@@ -42,6 +51,7 @@ Use this when the user cares about the game resembling uploaded sketches, sprite
 - On release, show recoil/snapback briefly.
 - Keep the projectile physics body and visible projectile synchronized.
 - Keep grab radius and drag envelope believable so mouse aim feels intentional.
+- If pull, release, or locomotion read awkwardly, generate more character poses before accepting the slice.
 
 ## Useful Runtime Areas
 
