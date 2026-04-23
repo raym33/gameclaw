@@ -1,0 +1,53 @@
+{
+  "template": "fixed-shooter-arcade",
+  "targetSlice": "premium",
+  "goal": "Turn a classic arcade shooter, alien-invasion brief, or fixed-screen sci-fi reference pack into a polished browser slice with crisp horizontal movement, immediate shots, readable enemy formations, and a strong wave-clear rhythm.",
+  "currentRepoStatus": {
+    "hasNativeRuntime": false,
+    "defaultSupportLevel": "approximate",
+    "rule": "If the request depends on authentic fixed-screen ship movement, descending formations, lane-wide enemy volleys, shields, or classic wave collapse logic, do not fake it with a generic top-down runtime. Open a dedicated fixed-shooter runtime path instead."
+  },
+  "preferredPath": {
+    "action": "add-or-scope-runtime",
+    "useWhen": "The user truly wants a marcianitos-style shooter, formation pressure, wave clears, or retro fixed-screen arcade tension.",
+    "mustHaveSystems": [
+      "horizontal player ship movement",
+      "enemy formation grid or formation lanes",
+      "formation descent and edge turn rules",
+      "player fire cadence and enemy volley cadence",
+      "shield or cover logic if requested",
+      "wave clear and danger escalation feedback",
+      "score, lives, and instant retry flow"
+    ]
+  },
+  "safeApproximation": {
+    "runtimeProfile": "arena-survivor",
+    "gameTypeKit": "orbital-defense-survivor",
+    "useWhen": "The user mainly wants the alien-shooter tone, wave pressure, or retro arcade presentation while a real fixed-shooter runtime is still out of scope.",
+    "rule": "State clearly that the slice is arcade-shooter-inspired rather than a true formation-based fixed shooter."
+  },
+  "presentationTargets": {
+    "screenRead": "The player should read ship position, enemy wave state, projectile lanes, and danger escalation immediately.",
+    "feel": "Shots should feel instant, dodges should feel fair, and wave clears should land with strong arcade reward.",
+    "sessionLoop": "Short runs, instant retries, obvious score chase, one-more-wave pull."
+  },
+  "assetShotList": [
+    "player ship family and muzzle or recoil states",
+    "enemy formation family with at least two readable silhouettes",
+    "projectile family for player and enemy fire",
+    "shield, bunker, or cover surfaces if used",
+    "wave clear, hit, danger, and game-over effects",
+    "score, lives, wave counter, and retry HUD treatment"
+  ],
+  "playtestFocus": [
+    "input immediacy",
+    "formation readability",
+    "projectile lane clarity",
+    "wave escalation pacing",
+    "restart speed and score-chase pull"
+  ],
+  "approximationNotes": [
+    "Do not use trademarked names or claim exact rules parity with an existing arcade shooter.",
+    "If the repo still lacks the real runtime, call out the missing formation and fixed-shooter systems as backlog instead of hiding them."
+  ]
+}

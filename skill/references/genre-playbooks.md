@@ -79,6 +79,19 @@ Template asset: `skill/assets/templates/falling-block-puzzle.json`
 
 Current repo note: there is no native falling-block runtime yet. For authentic asks, this template should push Codex toward a dedicated runtime instead of an unrelated approximation.
 
+## Fixed-Shooter / Arcade Alien Waves
+
+Use when the game lives or dies on ship movement, formation pressure, and wave clears.
+
+Template asset: `skill/assets/templates/fixed-shooter-arcade.json`
+
+- Core loop: dodge, fire, collapse formation, clear wave, retry for score.
+- Must feel good first: horizontal control, shot cadence, lane readability, danger escalation.
+- Minimum asset set: player ship, alien family, projectile family, cover or shield surfaces, hit and wave-clear effects, score/lives HUD.
+- Common failure: reskinning a generic shooter without formation logic or proper wave tension.
+
+Current repo note: there is no native fixed-shooter runtime yet. For authentic asks, this template should push Codex toward a dedicated runtime instead of a fake approximation.
+
 ## Hybrid Or Unclear Ideas
 
 If the request mixes several genres:
