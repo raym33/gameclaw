@@ -2,6 +2,8 @@
 
 Gameclaw composes systems into stable runtime profiles. Prefer adapting one of these before adding a new runtime.
 
+The goal is not to cover every genre immediately. The goal is to map a request to the fastest stable runtime that can still deliver a premium-feeling slice.
+
 ## Profiles
 
 - `arena-survivor`: top-down movement, enemy pressure, projectiles or pulse combat.
@@ -30,6 +32,14 @@ Defined in `shared/game.ts`:
 - `hybrid`: one unusual mechanic or visual twist on a stable runtime.
 - `approximate`: concept exceeds current engine scope; preserve the strongest hook in a playable slice.
 
+## Quality Targets By Profile
+
+- `arena-survivor`: readable kiting, clean enemy pressure, satisfying hit feedback.
+- `lane-runner`: fast lane commitment, readable hazards, crisp pickups.
+- `relic-hunt`: smooth exploration, clear collection loop, low-friction combat pressure.
+- `platformer-expedition`: tuned jump arc, good landings, readable patrol timing.
+- `slingshot-destruction`: believable drag-release, matching trajectory preview, strong material feedback, authored destruction puzzles.
+
 ## Implementation Map
 
 - Schema/types/labels: `shared/game.ts`
@@ -39,6 +49,8 @@ Defined in `shared/game.ts`:
 - Curated Astral Orchard data: `server/demo.ts`
 
 ## Adding A Runtime
+
+Only add a new runtime when an existing one cannot reach the requested quality bar without becoming misleading.
 
 1. Add types and labels in `shared/game.ts`.
 2. Teach `deriveRuntimeProfile()` when to select it.
