@@ -231,7 +231,7 @@ export function normalizeBlueprint(
       raw.approximationStrategy,
       defaultApproximationStrategy(runtimeProfile, supportLevel, systems.specialMechanic),
     ),
-    controlNotes: listOrFallback(raw.controlNotes, defaultControlNotes(runtimeProfile, systems)),
+    controlNotes: listOrFallback(raw.controlNotes, defaultControlNotes(runtimeProfile, systems, gameTypeKit)),
     coreLoop: listOrFallback(raw.coreLoop, defaultLoop(runtimeProfile, gameTypeKit)),
     mechanicHighlights: listOrFallback(
       raw.mechanicHighlights,
@@ -239,11 +239,11 @@ export function normalizeBlueprint(
     ),
     implementationNotes: listOrFallback(
       raw.implementationNotes,
-      defaultImplementationNotes(runtimeProfile, systems),
+      defaultImplementationNotes(runtimeProfile, systems, gameTypeKit),
     ),
     productionBacklog: listOrFallback(
       raw.productionBacklog,
-      defaultProductionBacklog(runtimeProfile, systems, supportLevel),
+      defaultProductionBacklog(runtimeProfile, systems, supportLevel, gameTypeKit),
     ),
     levelMoments: listOrFallback(raw.levelMoments, defaultMoments(runtimeProfile, gameTypeKit)),
     assetPrompts: listOrFallback(raw.assetPrompts, defaultAssetPrompts(title, runtimeProfile)),
@@ -256,8 +256,8 @@ export function normalizeBlueprint(
     palette: normalizePalette(raw.palette),
     systems,
     physics: normalizePhysics(raw.physics, runtimeProfile),
-    hero: normalizeCharacter(raw.hero, defaultHero(runtimeProfile)),
-    enemies: normalizeEnemies(raw.enemies, runtimeProfile),
+    hero: normalizeCharacter(raw.hero, defaultHero(runtimeProfile, gameTypeKit)),
+    enemies: normalizeEnemies(raw.enemies, runtimeProfile, gameTypeKit),
     sourceImageCount: options.sourceImageCount,
   }
 }
@@ -506,9 +506,13 @@ function normalizeCharacter(value: unknown, fallback: GameCharacter): GameCharac
   }
 }
 
-function normalizeEnemies(value: unknown, profile: RuntimeProfile): GameCharacter[] {
+function normalizeEnemies(
+  value: unknown,
+  profile: RuntimeProfile,
+  gameTypeKit: GameTypeKitId,
+): GameCharacter[] {
   if (!Array.isArray(value) || value.length === 0) {
-    return defaultEnemies(profile)
+    return defaultEnemies(profile, gameTypeKit)
   }
 
   return value
@@ -622,7 +626,16 @@ function defaultPhysics(profile: RuntimeProfile): PhysicsTuning {
   }
 }
 
-function defaultHero(profile: RuntimeProfile): GameCharacter {
+function defaultHero(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): GameCharacter {
+  if (gameTypeKit === 'learning-relic-quest') {
+    return {
+      name: 'Archive Runner',
+      role: 'learning guide',
+      description: 'A quick-footed guide who turns lesson fragments into a route worth mastering.',
+      abilities: ['Topic chain', 'Fast recall', 'Confidence streak'],
+    }
+  }
+
   switch (profile) {
     case 'slingshot-destruction':
       return {
@@ -657,7 +670,18 @@ function defaultHero(profile: RuntimeProfile): GameCharacter {
   }
 }
 
-function defaultEnemies(profile: RuntimeProfile): GameCharacter[] {
+function defaultEnemies(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): GameCharacter[] {
+  if (gameTypeKit === 'learning-relic-quest') {
+    return [
+      {
+        name: 'Noise Shade',
+        role: 'distraction',
+        description: 'A soft-pressure distraction that breaks focus if the route gets messy.',
+        abilities: ['Distract', 'Crowd the route'],
+      },
+    ]
+  }
+
   switch (profile) {
     case 'slingshot-destruction':
       return [
@@ -722,6 +746,8 @@ function defaultGenre(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): stri
 
 function defaultPlayerFantasy(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
   switch (gameTypeKit) {
+    case 'learning-relic-quest':
+      return 'Move through a knowledge trail, recover key facts under light pressure, and keep a mastery streak alive.'
     case 'spell-swarm-survivor':
       return 'Skate the arena edge, keep the cast cadence alive, and turn pressure into flow.'
     case 'orbital-defense-survivor':
@@ -792,7 +818,19 @@ function defaultApproximationStrategy(
   return `The full concept is broader than the current runtime, so the prototype collapses it into ${RUNTIME_LABELS[profile]} while preserving the strongest player-facing hook.`
 }
 
-function defaultControlNotes(profile: RuntimeProfile, systems: GameSystems): string[] {
+function defaultControlNotes(
+  profile: RuntimeProfile,
+  systems: GameSystems,
+  gameTypeKit: GameTypeKitId,
+): string[] {
+  if (gameTypeKit === 'learning-relic-quest') {
+    return [
+      'Move with WASD or arrow keys',
+      'Collect the marked knowledge pickups and avoid distractions',
+      'Keep your mastery streak alive through the route',
+    ]
+  }
+
   if (profile === 'slingshot-destruction') {
     return [
       'Drag the projectile with the mouse or touch',
@@ -836,6 +874,8 @@ function defaultControlNotes(profile: RuntimeProfile, systems: GameSystems): str
 
 function defaultLoop(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string[] {
   switch (gameTypeKit) {
+    case 'learning-relic-quest':
+      return ['Follow the learning trail', 'Collect the correct knowledge markers', 'Finish the route with your mastery streak intact']
     case 'spell-swarm-survivor':
       return ['Strafe the swarm edge', 'Keep spells cycling', 'Vacuum shards before the arena closes in']
     case 'orbital-defense-survivor':
@@ -878,6 +918,7 @@ function defaultMechanics(
   gameTypeKit: GameTypeKitId,
 ): string[] {
   const gameTypeBase: Partial<Record<GameTypeKitId, string[]>> = {
+    'learning-relic-quest': ['Knowledge marker collection', 'Mastery streak loop', 'Low-pressure pursuit'],
     'spell-swarm-survivor': ['Auto-cast cadence', 'Dense kiting routes', 'Reward vacuum timing'],
     'orbital-defense-survivor': ['Defensive pulse spacing', 'Wave reset windows', 'Safer inner-ring control'],
     'courier-sprint-runner': ['Fast lane snaps', 'Pickup chain routing', 'Short-risk recovery windows'],
@@ -911,7 +952,25 @@ function defaultMechanics(
   return base.slice(0, 6)
 }
 
-function defaultImplementationNotes(profile: RuntimeProfile, systems: GameSystems): string[] {
+function defaultImplementationNotes(
+  profile: RuntimeProfile,
+  systems: GameSystems,
+  gameTypeKit: GameTypeKitId,
+): string[] {
+  if (gameTypeKit === 'learning-relic-quest') {
+    const notes = [
+      'Treat collectibles as lesson content surfaces first and pickups second: terms, symbols, vocabulary, or steps should be readable on-screen.',
+      'Use enemies as soft distractions or pressure sources, not as the core fantasy. The learning loop should stay primary.',
+      'Reward correct collection chains with mastery or confidence feedback instead of harsh punishment.',
+    ]
+
+    if (systems.specialMechanic === 'combo-chain') {
+      notes.push('Tie combo language to mastery, streaks, or progress instead of combat framing.')
+    }
+
+    return notes.slice(0, 6)
+  }
+
   const notes =
     profile === 'slingshot-destruction'
       ? [
@@ -949,11 +1008,17 @@ function defaultProductionBacklog(
   profile: RuntimeProfile,
   systems: GameSystems,
   supportLevel: SupportLevel,
+  gameTypeKit: GameTypeKitId,
 ): string[] {
   const backlog = [
     'Replace placeholder shapes with authored sprites and hit feedback.',
     'Add progression, onboarding, and clearer fail-state messaging.',
   ]
+
+  if (gameTypeKit === 'learning-relic-quest') {
+    backlog.push('Replace generic pickups with a real lesson content pack, mastery tiers, and topic unlock flow.')
+    backlog.push('Add progress summaries, streak-safe retries, and educator-friendly result screens.')
+  }
 
   if (profile === 'slingshot-destruction') {
     backlog.push('Add material-specific destruction behavior and more than one fort layout.')
@@ -973,6 +1038,8 @@ function defaultProductionBacklog(
 
 function defaultMoments(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string[] {
   switch (gameTypeKit) {
+    case 'learning-relic-quest':
+      return ['First concept chain', 'Mid-route distraction spike', 'Final mastery pickup under light pressure']
     case 'spell-swarm-survivor':
       return ['First clean kite circle', 'Wave density spike', 'Shard vacuum recovery after near collapse']
     case 'orbital-defense-survivor':
@@ -1019,6 +1086,8 @@ function defaultAssetPrompts(title: string, profile: RuntimeProfile): string[] {
 
 function defaultWinCondition(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
   switch (gameTypeKit) {
+    case 'learning-relic-quest':
+      return 'Recover every knowledge marker on the route before the distraction pressure breaks the run.'
     case 'courier-sprint-runner':
       return 'Finish the route alive while collecting enough route markers to validate the delivery.'
     case 'hazard-rush-runner':
@@ -1051,6 +1120,8 @@ function defaultWinCondition(profile: RuntimeProfile, gameTypeKit: GameTypeKitId
 
 function defaultLoseCondition(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
   switch (gameTypeKit) {
+    case 'learning-relic-quest':
+      return 'Let the route collapse into confusion before the final concept chain is secured.'
     case 'courier-sprint-runner':
       return 'Lose the courier route to collisions before the finish sequence resolves.'
     case 'hazard-rush-runner':

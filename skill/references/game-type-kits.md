@@ -32,6 +32,7 @@ With game type kits, Codex should also change:
 
 ### Relic Hunt
 
+- `learning-relic-quest`: educational discovery loop with mastery streaks and soft pressure.
 - `maze-relic-scavenger`: wider map sweep and cleaner collection routing.
 - `pressure-relic-hunt`: stronger pursuit pressure and riskier last pickups.
 

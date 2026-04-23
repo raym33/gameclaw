@@ -19,7 +19,7 @@ type GameTypeKitTuning = {
   relicEnemyCap?: number
   relicCollectRadius?: number
   relicPickupScore?: number
-  relicLayout?: 'scatter-ring' | 'maze-ribbon' | 'pressure-clusters'
+  relicLayout?: 'scatter-ring' | 'maze-ribbon' | 'pressure-clusters' | 'knowledge-path'
   platformerMoveSpeed?: number
   platformerJumpVelocity?: number
   platformerPatrolSpeed?: number
@@ -167,6 +167,57 @@ export const GAME_TYPE_KITS = [
       relicCollectRadius: 26,
       relicPickupScore: 9,
       relicLayout: 'maze-ribbon',
+    },
+  },
+  {
+    id: 'learning-relic-quest',
+    label: 'Learning Relic Quest',
+    runtimeProfile: 'relic-hunt',
+    genreLabel: 'Educational relic quest',
+    summary: 'Collect knowledge markers, keep a mastery streak alive, and use light pressure to make recall engaging instead of punishing.',
+    keywords: [
+      'education',
+      'educational',
+      'learning',
+      'classroom',
+      'school',
+      'teacher',
+      'student',
+      'curriculum',
+      'history',
+      'science',
+      'math',
+      'language',
+      'museum',
+      'training',
+      'onboarding',
+      'gamification',
+      'gamified',
+      'educacion',
+      'educativo',
+      'aprendizaje',
+      'aula',
+      'colegio',
+      'matematicas',
+      'idiomas',
+      'historia',
+      'ciencia',
+      'formacion',
+      'gamificacion',
+    ],
+    preferredSystems: {
+      combat: 'none',
+      specialMechanic: 'combo-chain',
+    },
+    tuning: {
+      topDownPlayerSpeed: 214,
+      enemySpawnInterval: 1.85,
+      enemyBaseSpeed: 72,
+      chaseMultiplier: 0.68,
+      relicEnemyCap: 5,
+      relicCollectRadius: 28,
+      relicPickupScore: 12,
+      relicLayout: 'knowledge-path',
     },
   },
   {

@@ -8,6 +8,8 @@ The goal is not “any game”. The goal is getting to a small game that already
 
 If the target is “like the games people buy on app stores”, Gameclaw should push toward that too: more detailed screens, stronger visual hierarchy, richer props and effects, and a playable slice that can survive screenshots and short trailer clips.
 
+It can also be aimed at educational or gamified products: short learning loops, mastery streaks, chapter unlock flow, and classroom-friendly slices that still look like games instead of worksheets.
+
 ## What This Repo Is
 
 - A browser game generator built around stable runtime profiles and reusable game type kits.
@@ -21,11 +23,11 @@ For polished or sellable requests, the repo is meant to push Codex to generate a
 - Spell swarm survivor
 - Orbital defense arena
 - Traffic weave, courier, or hazard rush runner
-- Maze scavenger or pressure relic hunt
+- Maze, educational, or pressure relic hunt
 - Treasure route, precision climb, or combat gauntlet platformer
 - Slingshot destruction with Matter physics
 
-The system favors stable playable slices over pretending it can generate any full game from scratch. Today it ships 5 executable runtime families and 11 narrower game type kits on top of them.
+The system favors stable playable slices over pretending it can generate any full game from scratch. Today it ships 5 executable runtime families and 12 narrower game type kits on top of them.
 
 ## Quality Direction
 
@@ -36,7 +38,7 @@ The system favors stable playable slices over pretending it can generate any ful
 - Treat game feel and visual integration as implementation work, not polish-afterthoughts.
 - For commercial-looking output, push detail density on the main screen instead of stopping at a technically correct prototype.
 
-The repo now also includes reusable runtime presets, scene scaffolds, and game type catalogs in `src/game/runtimeTemplates.ts`, `src/game/runtimeSceneScaffold.ts`, `shared/gameTypeKits.ts`, and `src/game/gameTypeStageLayouts.ts`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, finish overlays, stage layouts, and gameplay tuning instead of rediscovering them every time.
+The repo now also includes reusable runtime presets, scene scaffolds, game type catalogs, and reusable product templates in `src/game/runtimeTemplates.ts`, `src/game/runtimeSceneScaffold.ts`, `shared/gameTypeKits.ts`, `src/game/gameTypeStageLayouts.ts`, and `skill/assets/templates/education-gamification.json`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, finish overlays, stage layouts, gameplay tuning, and educational gamification loops instead of rediscovering them every time.
 
 ## Stack
 
@@ -123,7 +125,7 @@ Example prompt:
 Use $gameclaw to turn these sketches, sprites and notes into a polished playable browser vertical slice with professional movement, sprites, physics, and all missing images generated and integrated.
 ```
 
-The skill teaches Codex how to work with this repo, including runtime profiles, executable game type kits, preset kits by genre, reusable scene scaffolds, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
+The skill teaches Codex how to work with this repo, including runtime profiles, executable game type kits, preset kits by genre, reusable scene scaffolds, educational/gamification templates, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
 
 Install from the repo root:
 

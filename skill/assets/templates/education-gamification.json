@@ -1,0 +1,75 @@
+{
+  "template": "education-gamification",
+  "targetSlice": "premium",
+  "goal": "Turn a lesson, training module, curriculum fragment, or onboarding flow into a polished short-session browser game that feels motivating instead of corporate or punitive.",
+  "primaryMapping": {
+    "runtimeProfile": "relic-hunt",
+    "gameTypeKit": "learning-relic-quest",
+    "useWhen": "The user wants exploration, discovery, collecting concepts, museum-style progression, or a soft-pressure learning loop."
+  },
+  "alternativeMappings": [
+    {
+      "runtimeProfile": "lane-runner",
+      "gameTypeKit": "courier-sprint-runner",
+      "useWhen": "The ask is closer to quick drills, timed review, or route-based streak play."
+    },
+    {
+      "runtimeProfile": "platformer-expedition",
+      "gameTypeKit": "precision-climb-platformer",
+      "useWhen": "The ask is about mastery ladders, chapter climbing, or progressive skill gates."
+    }
+  ],
+  "sessionDesign": {
+    "lessonUnit": "One topic cluster per slice. Do not try to teach an entire course in one screen.",
+    "sessionLength": "60 to 180 seconds per run",
+    "difficultyCurve": "Start with recognition, then recall, then speed or pressure",
+    "failureModel": "Soft retry, low frustration, and visible progress after each run"
+  },
+  "gamificationLoops": {
+    "core": [
+      "Collect correct knowledge markers or checkpoints",
+      "Maintain a mastery streak",
+      "Unlock the next concept cluster or badge"
+    ],
+    "rewardSystems": [
+      "stars or medals",
+      "topic badges",
+      "streak meter",
+      "chapter unlock or world-map node"
+    ],
+    "safePunishments": [
+      "streak break",
+      "time loss",
+      "reroute",
+      "reduced rating"
+    ]
+  },
+  "contentRules": [
+    "Make the learning content visible inside the pickups, signs, cards, gates, or checkpoint surfaces.",
+    "If the game uses wrong answers, make the mistake readable and recoverable instead of instantly humiliating the player.",
+    "Use encouraging progression language such as mastery, streak, chapter, confidence, or badge instead of combat-first framing."
+  ],
+  "artDirection": {
+    "look": "bright, inviting, reward-rich, clean silhouettes, low-clutter screen composition",
+    "ui": "large readable labels, obvious reward states, no debug-looking HUD",
+    "fx": "pleasant collection bursts, chapter clear surfaces, low-threat failure feedback"
+  },
+  "assetShotList": [
+    "learner avatar move and celebrate family",
+    "concept pickup family with clear labels or symbols",
+    "checkpoint or chapter gate family",
+    "reward badge, star, or mastery token family",
+    "soft distraction or hazard family",
+    "HUD plate, progress meter, streak badge, and chapter clear surface"
+  ],
+  "playtestFocus": [
+    "is the learning content readable while moving",
+    "does the reward loop feel motivating instead of noisy",
+    "are mistakes recoverable without killing the session",
+    "does the slice still feel like a real game rather than a worksheet"
+  ],
+  "approximationNotes": [
+    "If the user wants quizzes, branching dialogue, dashboards, or assessment exports, keep the playable loop small and state honestly which parts are still approximated.",
+    "Do not fake a full LMS or teacher dashboard inside the first slice."
+  ]
+}

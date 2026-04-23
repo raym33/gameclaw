@@ -55,12 +55,14 @@ Common game type kit: `chain-reaction-siege`
 Use when clarity matters more than raw spectacle.
 
 Preset kit: `skill/assets/presets/relic-hunt.json`
-Common game type kits: `maze-relic-scavenger`, `pressure-relic-hunt`
+Common game type kits: `learning-relic-quest`, `maze-relic-scavenger`, `pressure-relic-hunt`
 
 - Core loop: inspect, act, resolve, reset, improve.
 - Must feel good first: state clarity, reset speed, legible object interactions, low input friction.
 - Minimum asset set: interactable objects, board or scene surfaces, resolution feedback, hint surfaces, clean state icons if needed.
 - Common failure: overcomplicated mechanics with no visual hierarchy.
+
+For educational or gamified requests, `learning-relic-quest` is usually the first stable fit before inventing a bespoke edtech runtime.
 
 ## Hybrid Or Unclear Ideas
 

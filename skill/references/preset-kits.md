@@ -2,6 +2,8 @@
 
 Use this when Codex needs concrete starting defaults instead of reinventing camera, feel, HUD, and asset coverage from scratch.
 
+If the request is educational or about gamification, load `skill/assets/templates/education-gamification.json` alongside the chosen preset.
+
 ## What These Presets Are
 
 Each preset kit in `skill/assets/presets/` gives a reusable starting point for one runtime profile:
@@ -43,6 +45,18 @@ Show one preset:
 
 ```bash
 ./skill/scripts/show-preset.sh slingshot-destruction
+```
+
+List templates:
+
+```bash
+./skill/scripts/show-template.sh
+```
+
+Show the education template:
+
+```bash
+./skill/scripts/show-template.sh education-gamification
 ```
 
 ## Rule

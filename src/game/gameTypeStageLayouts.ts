@@ -31,6 +31,21 @@ export function getRelicHuntLayout(
   gameHeight: number,
 ): StagePoint[] {
   switch (gameTypeKit) {
+    case 'learning-relic-quest':
+      return [
+        { x: 150, y: 122 },
+        { x: 270, y: 164 },
+        { x: 396, y: 128 },
+        { x: 520, y: 174 },
+        { x: 648, y: 138 },
+        { x: 778, y: 182 },
+        { x: 814, y: 292 },
+        { x: 694, y: 338 },
+        { x: 560, y: 302 },
+        { x: 434, y: 350 },
+        { x: 286, y: 318 },
+        { x: 164, y: 382 },
+      ]
     case 'maze-relic-scavenger':
       return [
         { x: 148, y: 128 },
