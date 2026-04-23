@@ -35,6 +35,8 @@ The system favors stable playable slices over pretending it can generate any ful
 - Treat game feel and visual integration as implementation work, not polish-afterthoughts.
 - For commercial-looking output, push detail density on the main screen instead of stopping at a technically correct prototype.
 
+The repo now also includes runtime preset templates in `src/game/runtimeTemplates.ts`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, burst tuning, and slingshot camera behavior instead of rediscovering them every time.
+
 ## Stack
 
 - React + Vite

@@ -15,6 +15,7 @@ import {
   type GamePalette,
   type RuntimeProfile,
 } from '../../shared/game'
+import { getRuntimeSceneTemplate, type RuntimeSceneTemplate } from './runtimeTemplates'
 
 const GAME_WIDTH = 960
 const GAME_HEIGHT = 540
@@ -195,10 +196,6 @@ const SLINGSHOT_ANCHOR_GRAB_RADIUS = 54
 const SLINGSHOT_RELEASE_MIN_PULL = 16
 const SLINGSHOT_PROJECTILE_RADIUS = 18
 const MATTER_BASE_DELTA = 1000 / 60
-const SLINGSHOT_CAMERA_IDLE_ZOOM = 1.045
-const SLINGSHOT_CAMERA_DRAG_ZOOM = 1.075
-const SLINGSHOT_CAMERA_FLIGHT_ZOOM = 1.11
-
 const SLINGSHOT_LEVELS: SlingshotLevel[] = [
   {
     name: 'Lantern Nursery',
@@ -357,6 +354,7 @@ export function createGameConfig(
 class GeneratedGameScene extends Phaser.Scene {
   private readonly blueprint: GameBlueprint
   private readonly runtimeProfile: RuntimeProfile
+  private readonly runtimeTemplate: RuntimeSceneTemplate
   private keys?: Record<string, Phaser.Input.Keyboard.Key>
   private player?: ShapeObject
   private playerHalfWidth = 14
@@ -393,6 +391,7 @@ class GeneratedGameScene extends Phaser.Scene {
     super('generated-game')
     this.blueprint = blueprint
     this.runtimeProfile = runtimeProfile
+    this.runtimeTemplate = getRuntimeSceneTemplate(runtimeProfile)
   }
 
   preload(): void {
@@ -412,7 +411,7 @@ class GeneratedGameScene extends Phaser.Scene {
 
   create(): void {
     this.resetSessionState()
-    this.timeLeft = defaultTimerForProfile(this.runtimeProfile)
+    this.timeLeft = this.runtimeTemplate.timerSeconds
 
     this.prepareAstralCutoutTextures()
     this.drawBackdrop(this.blueprint.palette)
@@ -577,8 +576,9 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private createHud(): void {
+    const hud = this.runtimeTemplate.hud
     this.add
-      .rectangle(20, 18, this.runtimeProfile === 'slingshot-destruction' ? 398 : 470, 100, 0x081014, 0.5)
+      .rectangle(20, 18, hud.panelWidth, hud.panelHeight, 0x081014, 0.5)
       .setOrigin(0, 0)
       .setDepth(28)
       .setStrokeStyle(1, parseColor(this.blueprint.palette.accentAlt), 0.12)
@@ -586,7 +586,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.add
       .text(28, 24, this.blueprint.title.toUpperCase(), {
         fontFamily: 'IBM Plex Mono, monospace',
-        fontSize: '13px',
+        fontSize: hud.titleFontSize,
         color: this.blueprint.palette.accent,
       })
       .setAlpha(0.95)
@@ -594,16 +594,16 @@ class GeneratedGameScene extends Phaser.Scene {
 
     this.statusText = this.add.text(28, 50, '', {
       fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: this.runtimeProfile === 'slingshot-destruction' ? '13px' : '15px',
+      fontSize: hud.statusFontSize,
       color: this.blueprint.palette.text,
     })
     this.statusText.setDepth(30)
 
     this.objectiveText = this.add.text(28, 84, '', {
       fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: this.runtimeProfile === 'slingshot-destruction' ? '10px' : '12px',
+      fontSize: hud.objectiveFontSize,
       color: '#d7d0c5',
-      wordWrap: { width: this.runtimeProfile === 'slingshot-destruction' ? 346 : 440 },
+      wordWrap: { width: hud.objectiveWrapWidth },
     })
     this.objectiveText.setDepth(30)
 
@@ -613,11 +613,15 @@ class GeneratedGameScene extends Phaser.Scene {
       color: this.blueprint.palette.accentAlt,
     })
     this.supportText.setDepth(30)
-    this.supportText.setText(
-      this.runtimeProfile === 'slingshot-destruction'
-        ? 'R reinicia la run · F alterna pantalla completa'
-        : `${RUNTIME_LABELS[this.runtimeProfile]} / ${this.blueprint.supportLevel.toUpperCase()} / ${this.blueprint.noveltyHook}`,
-    )
+    this.supportText.setText(this.resolveHudSupportText())
+  }
+
+  private resolveHudSupportText(): string {
+    if (this.runtimeTemplate.hud.supportMode === 'restart-fullscreen') {
+      return this.runtimeTemplate.hud.restartText ?? 'R reinicia la run · F alterna pantalla completa'
+    }
+
+    return `${RUNTIME_LABELS[this.runtimeProfile]} / ${this.blueprint.supportLevel.toUpperCase()} / ${this.blueprint.noveltyHook}`
   }
 
   private drawBackdrop(palette: GamePalette): void {
@@ -689,25 +693,36 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private createPlayer(): void {
-    if (this.runtimeProfile === 'platformer-expedition') {
-      const player = this.add.rectangle(120, GAME_HEIGHT - 120, 26, 32, parseColor(this.blueprint.palette.accent))
+    const playerPreset = this.runtimeTemplate.player
+    if (!playerPreset) {
+      return
+    }
+
+    if (playerPreset.shape === 'rectangle') {
+      const player = this.add.rectangle(
+        playerPreset.spawn.x,
+        playerPreset.spawn.y,
+        playerPreset.width,
+        playerPreset.height,
+        parseColor(this.blueprint.palette.accent),
+      )
       player.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.8)
       this.player = player
-      this.playerHalfWidth = 13
-      this.playerHalfHeight = 16
+      this.playerHalfWidth = playerPreset.width / 2
+      this.playerHalfHeight = playerPreset.height / 2
       return
     }
 
     const player = this.add.circle(
-      GAME_WIDTH * 0.5,
-      GAME_HEIGHT * 0.6,
-      14,
+      playerPreset.spawn.x,
+      playerPreset.spawn.y,
+      playerPreset.radius,
       parseColor(this.blueprint.palette.accent),
     )
     player.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.8)
     this.player = player
-    this.playerHalfWidth = 14
-    this.playerHalfHeight = 14
+    this.playerHalfWidth = playerPreset.radius
+    this.playerHalfHeight = playerPreset.radius
   }
 
   private createArenaSurvivor(): void {
@@ -944,7 +959,8 @@ class GeneratedGameScene extends Phaser.Scene {
         .text(
           28,
           GAME_HEIGHT - 56,
-          'Arrastra hacia atrás, apunta con la trayectoria y suelta. WASD/flechas ajustan tensión, ESPACIO dispara.',
+          this.runtimeTemplate.slingshot?.controlsHint ??
+            'Arrastra hacia atrás, apunta con la trayectoria y suelta. WASD/flechas ajustan tensión, ESPACIO dispara.',
           {
             fontFamily: 'IBM Plex Mono, monospace',
             fontSize: '11px',
@@ -1026,11 +1042,12 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private configureSlingshotCamera(): void {
+    const cameraPreset = this.runtimeTemplate.slingshot?.camera
     const camera = this.cameras.main
     camera.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT)
     camera.setRoundPixels(true)
-    camera.setZoom(1.09)
-    this.snapSlingshotCameraTo({ x: 700, y: 286 }, 1.09)
+    camera.setZoom(cameraPreset?.snapZoom ?? 1.09)
+    this.snapSlingshotCameraTo(cameraPreset?.snapFocus ?? { x: 700, y: 286 }, cameraPreset?.snapZoom ?? 1.09)
   }
 
   private updateSlingshotCamera(): void {
@@ -1038,30 +1055,47 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
+    const cameraPreset = this.runtimeTemplate.slingshot?.camera
     let focusX = this.slingshot.levelFocus.x
     let focusY = this.slingshot.levelFocus.y
-    let targetZoom = SLINGSHOT_CAMERA_IDLE_ZOOM
+    let targetZoom = cameraPreset?.idleZoom ?? 1.045
 
     if (this.slingshot.dragging && this.slingshot.projectile) {
-      focusX = Phaser.Math.Linear(this.slingshot.levelFocus.x, this.slingshot.projectile.x + 160, 0.16)
-      focusY = Phaser.Math.Linear(this.slingshot.levelFocus.y, this.slingshot.projectile.y, 0.12)
-      targetZoom = SLINGSHOT_CAMERA_DRAG_ZOOM
+      focusX = Phaser.Math.Linear(
+        this.slingshot.levelFocus.x,
+        this.slingshot.projectile.x + (cameraPreset?.dragFocusOffset.x ?? 160),
+        cameraPreset?.dragFocusBlend.x ?? 0.16,
+      )
+      focusY = Phaser.Math.Linear(
+        this.slingshot.levelFocus.y,
+        this.slingshot.projectile.y + (cameraPreset?.dragFocusOffset.y ?? 0),
+        cameraPreset?.dragFocusBlend.y ?? 0.12,
+      )
+      targetZoom = cameraPreset?.dragZoom ?? 1.075
     }
 
     if (this.slingshot.projectileLaunched && this.slingshot.projectile) {
-      focusX = Phaser.Math.Linear(this.slingshot.levelFocus.x - 44, this.slingshot.projectile.x + 80, 0.72)
-      focusY = Phaser.Math.Linear(this.slingshot.levelFocus.y, this.slingshot.projectile.y - 10, 0.44)
-      targetZoom = SLINGSHOT_CAMERA_FLIGHT_ZOOM
+      focusX = Phaser.Math.Linear(
+        this.slingshot.levelFocus.x - 44,
+        this.slingshot.projectile.x + (cameraPreset?.flightFocusOffset.x ?? 80),
+        cameraPreset?.flightFocusBlend.x ?? 0.72,
+      )
+      focusY = Phaser.Math.Linear(
+        this.slingshot.levelFocus.y,
+        this.slingshot.projectile.y + (cameraPreset?.flightFocusOffset.y ?? -10),
+        cameraPreset?.flightFocusBlend.y ?? 0.44,
+      )
+      targetZoom = cameraPreset?.flightZoom ?? 1.11
     }
 
     if (this.slingshot.transitioning) {
-      targetZoom = 1.08
+      targetZoom = cameraPreset?.transitionZoom ?? 1.08
     }
 
     this.applySlingshotCameraTarget(
       {
-        x: Phaser.Math.Clamp(focusX, 480, 780),
-        y: Phaser.Math.Clamp(focusY, 220, 356),
+        x: Phaser.Math.Clamp(focusX, cameraPreset?.clamp.minX ?? 480, cameraPreset?.clamp.maxX ?? 780),
+        y: Phaser.Math.Clamp(focusY, cameraPreset?.clamp.minY ?? 220, cameraPreset?.clamp.maxY ?? 356),
       },
       targetZoom,
     )
@@ -1195,7 +1229,7 @@ class GeneratedGameScene extends Phaser.Scene {
       this.blueprint.systems.combat === 'pulse-burst' &&
       Phaser.Input.Keyboard.JustDown(this.keys.SPACE)
     ) {
-      this.emitBurst(this.runtimeProfile === 'platformer-expedition' ? 90 : 120)
+      this.emitBurst(this.runtimeTemplate.burst.radius)
     }
   }
 
@@ -1307,7 +1341,7 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    this.burstCooldown = this.runtimeProfile === 'relic-hunt' ? 1.5 : 2
+    this.burstCooldown = this.runtimeTemplate.burst.cooldown
     this.cameras.main.flash(120, 243, 185, 95, false)
 
     for (const enemy of [...this.enemies]) {
@@ -1365,7 +1399,7 @@ class GeneratedGameScene extends Phaser.Scene {
       enemy.shape.y += vector.y
 
       if (Phaser.Math.Distance.Between(enemy.shape.x, enemy.shape.y, this.player.x, this.player.y) < 24) {
-        this.health -= this.runtimeProfile === 'relic-hunt' ? 10 : 8
+        this.health -= this.runtimeTemplate.chaseContactDamage
         enemy.shape.x -= vector.x * 12
         enemy.shape.y -= vector.y * 12
         this.combo = 1
@@ -2946,21 +2980,6 @@ class GeneratedGameScene extends Phaser.Scene {
   private removeLaneObject(object: LaneObject): void {
     object.shape.destroy()
     this.laneObjects.splice(this.laneObjects.indexOf(object), 1)
-  }
-}
-
-function defaultTimerForProfile(profile: RuntimeProfile): number {
-  switch (profile) {
-    case 'lane-runner':
-      return 45
-    case 'platformer-expedition':
-      return 55
-    case 'relic-hunt':
-      return 0
-    case 'slingshot-destruction':
-      return 0
-    default:
-      return 60
   }
 }
 

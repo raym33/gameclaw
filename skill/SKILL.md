@@ -29,6 +29,7 @@ Classify the request before editing:
 - **API/upload**: `server/index.ts`, `src/lib/api.ts`
 - **UI/demo shell**: `src/App.tsx`, `src/index.css`
 - **Playable runtime**: `src/game/createGame.ts`
+- **Runtime templates**: `src/game/runtimeTemplates.ts`
 - **Curated demo/assets**: `server/demo.ts`, `demo-inputs/sample-user`, `src/assets/astral-orchard`
 - **Skill packaging**: `skill/SKILL.md`, `skill/agents/openai.yaml`, `skill/references/*`
 
