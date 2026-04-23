@@ -14,7 +14,7 @@ export function buildAstralOrchardDemoResult(): GenerationResult {
         'A moonlit orchard hangs over the clouds. Brass bridges, lantern fruit, and glass observatories float between islands waiting for a precise shot.',
       visualStyle:
         'Paper lantern warmth, deep teal night skies, brass hardware, frosted glass, and cozy magical silhouettes.',
-      audioMood: 'Soft nocturnal ambience, brittle glass cracks, and bright impact chimes.',
+      audioMood: 'Soft nocturnal ambience, crystalline shatters, brass resonance, woody breaks, and bright orbit-core releases.',
       noveltyHook:
         'Every chamber is a tiny destruction puzzle: preserve shots, collapse support legs, and let the architecture fail in beautiful ways.',
       approximationStrategy:
@@ -30,23 +30,25 @@ export function buildAstralOrchardDemoResult(): GenerationResult {
         'Trigger a chain reaction and move to the next chamber',
       ],
       mechanicHighlights: [
-        'Three authored destruction chambers with run-level shot preservation',
-        'Wood, glass, and brass supports with different resistance, mass, and impact feedback',
-        'Readable tension, trajectory preview, projectile trail, collision VFX, and restart/fullscreen shortcuts',
+        'Five authored destruction chambers with run-level shot preservation',
+        'Wood, glass, and brass supports with distinct resistance, feel, and procedural audio',
+        'Readable tension, matching trajectory preview, cinematic camera, projectile trail, collision VFX, and restart/fullscreen shortcuts',
       ],
       implementationNotes: [
         'Use Matter bodies for projectiles, targets, and support pieces.',
         'Damage targets and fragile supports from real collision speed instead of only checking out-of-bounds collapse.',
       ],
       productionBacklog: [
-        'Add bespoke audio, chamber medals, and a world map.',
-        'Create more hand-authored chambers with tuned difficulty curves.',
+        'Add chamber medals, score breakdowns, and a world map.',
+        'Add more environmental props and parallax layers tied to each chamber theme.',
         'Pipe real uploaded assets into the runtime visuals instead of abstract shapes.',
       ],
       levelMoments: [
         'Break the first canopy cleanly',
+        'Fold the moonglass arcade inward from the crown',
         'Twist the observatory bridge off its support legs',
-        'Trigger the final brass cage collapse',
+        'Drop the bellspire carriage from its hinge',
+        'Trigger the final brass crown collapse',
       ],
       assetPrompts: [
         'Astral Orchard hero portrait in lantern-lit papercraft fantasy style',
@@ -57,7 +59,7 @@ export function buildAstralOrchardDemoResult(): GenerationResult {
         'This demo is curated from the Astral Orchard reference pack.',
         'It focuses on slingshot physics, chamber readability, and a dreamy night-orchard tone.',
       ],
-      winCondition: 'Free every orbit core across the three observatory chambers.',
+      winCondition: 'Free every orbit core across the five observatory chambers.',
       loseCondition: 'Run out of seeds before the orchard is fully unlocked.',
       palette: {
         bg: '#101722',

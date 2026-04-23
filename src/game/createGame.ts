@@ -144,6 +144,7 @@ type SlingshotLevel = {
 
 type SlingshotState = {
   anchor: { x: number; y: number }
+  levelFocus: { x: number; y: number }
   dragGuide: Phaser.GameObjects.Graphics
   projectile: MatterShape | null
   projectileLaunched: boolean
@@ -181,12 +182,15 @@ const SLINGSHOT_DRAG_RADIUS = 38
 const SLINGSHOT_ANCHOR_GRAB_RADIUS = 54
 const SLINGSHOT_RELEASE_MIN_PULL = 16
 const MATTER_BASE_DELTA = 1000 / 60
+const SLINGSHOT_CAMERA_IDLE_ZOOM = 1.045
+const SLINGSHOT_CAMERA_DRAG_ZOOM = 1.075
+const SLINGSHOT_CAMERA_FLIGHT_ZOOM = 1.11
 
 const SLINGSHOT_LEVELS: SlingshotLevel[] = [
   {
     name: 'Lantern Nursery',
     shots: 5,
-    note: 'Open the glass canopy and release the first orbit cores.',
+    note: 'Crack the canopy, let the wooden foot give way, and free the first orbit cores.',
     blocks: [
       { x: 650, y: GAME_HEIGHT - 96, width: 64, height: 24, material: 'wood' },
       { x: 720, y: GAME_HEIGHT - 96, width: 64, height: 24, material: 'wood' },
@@ -198,6 +202,26 @@ const SLINGSHOT_LEVELS: SlingshotLevel[] = [
     targets: [
       { x: 682, y: GAME_HEIGHT - 210, integrity: 3.7 },
       { x: 725, y: GAME_HEIGHT - 210, integrity: 3.7 },
+    ],
+  },
+  {
+    name: 'Moonglass Arcade',
+    shots: 4,
+    note: 'The glass ribs are fragile. Break the arch high and let the dome fold into itself.',
+    blocks: [
+      { x: 624, y: GAME_HEIGHT - 96, width: 76, height: 22, material: 'wood' },
+      { x: 714, y: GAME_HEIGHT - 96, width: 76, height: 22, material: 'wood' },
+      { x: 804, y: GAME_HEIGHT - 96, width: 76, height: 22, material: 'wood' },
+      { x: 652, y: GAME_HEIGHT - 144, width: 22, height: 86, material: 'glass' },
+      { x: 776, y: GAME_HEIGHT - 144, width: 22, height: 86, material: 'glass' },
+      { x: 714, y: GAME_HEIGHT - 188, width: 164, height: 20, material: 'brass' },
+      { x: 680, y: GAME_HEIGHT - 232, width: 22, height: 70, material: 'glass' },
+      { x: 748, y: GAME_HEIGHT - 232, width: 22, height: 70, material: 'glass' },
+      { x: 714, y: GAME_HEIGHT - 268, width: 118, height: 18, material: 'wood' },
+    ],
+    targets: [
+      { x: 680, y: GAME_HEIGHT - 286, integrity: 3.9 },
+      { x: 748, y: GAME_HEIGHT - 286, integrity: 3.9 },
     ],
   },
   {
@@ -220,6 +244,26 @@ const SLINGSHOT_LEVELS: SlingshotLevel[] = [
     ],
   },
   {
+    name: 'Bellspire Nest',
+    shots: 5,
+    note: 'This tower punishes direct shots. Break the low hinge and let the top bell carriage drop.',
+    blocks: [
+      { x: 646, y: GAME_HEIGHT - 96, width: 74, height: 22, material: 'wood' },
+      { x: 734, y: GAME_HEIGHT - 96, width: 74, height: 22, material: 'wood' },
+      { x: 690, y: GAME_HEIGHT - 140, width: 24, height: 86, material: 'glass' },
+      { x: 780, y: GAME_HEIGHT - 140, width: 24, height: 86, material: 'glass' },
+      { x: 734, y: GAME_HEIGHT - 184, width: 160, height: 20, material: 'brass' },
+      { x: 734, y: GAME_HEIGHT - 232, width: 24, height: 76, material: 'wood' },
+      { x: 692, y: GAME_HEIGHT - 270, width: 110, height: 18, material: 'glass' },
+      { x: 776, y: GAME_HEIGHT - 304, width: 22, height: 66, material: 'glass' },
+      { x: 734, y: GAME_HEIGHT - 334, width: 150, height: 18, material: 'brass' },
+    ],
+    targets: [
+      { x: 694, y: GAME_HEIGHT - 294, integrity: 4.4 },
+      { x: 776, y: GAME_HEIGHT - 356, integrity: 4.7 },
+    ],
+  },
+  {
     name: 'Celestial Harvest',
     shots: 5,
     note: 'The brass cage is tougher. Create a chain reaction instead of brute force.',
@@ -238,6 +282,32 @@ const SLINGSHOT_LEVELS: SlingshotLevel[] = [
       { x: 690, y: GAME_HEIGHT - 292, integrity: 3.9 },
       { x: 770, y: GAME_HEIGHT - 202, integrity: 5.1 },
       { x: 812, y: GAME_HEIGHT - 250, integrity: 4.9 },
+    ],
+  },
+  {
+    name: 'Crown Of The Orchard',
+    shots: 6,
+    note: 'Final chamber. Peel the wood braces first, then ring through the brass crown.',
+    blocks: [
+      { x: 618, y: GAME_HEIGHT - 94, width: 70, height: 22, material: 'wood' },
+      { x: 696, y: GAME_HEIGHT - 94, width: 70, height: 22, material: 'wood' },
+      { x: 774, y: GAME_HEIGHT - 94, width: 70, height: 22, material: 'wood' },
+      { x: 852, y: GAME_HEIGHT - 94, width: 70, height: 22, material: 'wood' },
+      { x: 656, y: GAME_HEIGHT - 138, width: 22, height: 84, material: 'glass' },
+      { x: 814, y: GAME_HEIGHT - 138, width: 22, height: 84, material: 'glass' },
+      { x: 734, y: GAME_HEIGHT - 182, width: 198, height: 20, material: 'brass' },
+      { x: 700, y: GAME_HEIGHT - 226, width: 22, height: 74, material: 'wood' },
+      { x: 768, y: GAME_HEIGHT - 226, width: 22, height: 74, material: 'wood' },
+      { x: 734, y: GAME_HEIGHT - 264, width: 136, height: 18, material: 'glass' },
+      { x: 734, y: GAME_HEIGHT - 308, width: 24, height: 70, material: 'brass' },
+      { x: 686, y: GAME_HEIGHT - 344, width: 118, height: 18, material: 'glass' },
+      { x: 782, y: GAME_HEIGHT - 344, width: 118, height: 18, material: 'glass' },
+      { x: 734, y: GAME_HEIGHT - 384, width: 204, height: 18, material: 'brass' },
+    ],
+    targets: [
+      { x: 686, y: GAME_HEIGHT - 364, integrity: 4.4 },
+      { x: 782, y: GAME_HEIGHT - 364, integrity: 4.4 },
+      { x: 734, y: GAME_HEIGHT - 414, integrity: 5.6 },
     ],
   },
 ]
@@ -303,6 +373,8 @@ class GeneratedGameScene extends Phaser.Scene {
   private onGround = false
   private facing = 1
   private gameEnded = false
+  private audioContext: AudioContext | null = null
+  private lastSfxAt = 0
 
   constructor(blueprint: GameBlueprint, runtimeProfile: RuntimeProfile) {
     super('generated-game')
@@ -829,6 +901,7 @@ class GeneratedGameScene extends Phaser.Scene {
   private createSlingshotDestruction(): void {
     this.slingshot = {
       anchor: { x: 140, y: GAME_HEIGHT - 120 },
+      levelFocus: { x: 696, y: 294 },
       dragGuide: this.add.graphics(),
       projectile: null,
       projectileLaunched: false,
@@ -881,6 +954,7 @@ class GeneratedGameScene extends Phaser.Scene {
 
     this.drawSlingshotFrame()
     this.slingshot.heroSprite = this.createSlingshotHeroSprite(this.slingshot.heroBase.x, this.slingshot.heroBase.y)
+    this.configureSlingshotCamera()
 
     this.loadSlingshotLevel(0)
     this.refreshDragGuide()
@@ -899,6 +973,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.updateSlingshotKeyboardAim()
+    this.updateSlingshotCamera()
     this.syncSlingshotArt()
     this.syncSlingshotHero()
     this.refreshDragGuide()
@@ -923,6 +998,7 @@ class GeneratedGameScene extends Phaser.Scene {
       if (rested || lost) {
         projectile.art?.destroy()
         projectile.shadow?.destroy()
+        projectile.glow?.destroy()
         projectile.destroy()
         this.slingshot.projectile = null
         this.slingshot.projectileLaunched = false
@@ -937,6 +1013,76 @@ class GeneratedGameScene extends Phaser.Scene {
           this.finishGame(false, this.blueprint.loseCondition)
         }
       }
+    }
+  }
+
+  private configureSlingshotCamera(): void {
+    const camera = this.cameras.main
+    camera.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT)
+    camera.setRoundPixels(true)
+    camera.setZoom(1.09)
+    this.snapSlingshotCameraTo({ x: 700, y: 286 }, 1.09)
+  }
+
+  private updateSlingshotCamera(): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    let focusX = this.slingshot.levelFocus.x
+    let focusY = this.slingshot.levelFocus.y
+    let targetZoom = SLINGSHOT_CAMERA_IDLE_ZOOM
+
+    if (this.slingshot.dragging && this.slingshot.projectile) {
+      focusX = Phaser.Math.Linear(this.slingshot.levelFocus.x, this.slingshot.projectile.x + 160, 0.16)
+      focusY = Phaser.Math.Linear(this.slingshot.levelFocus.y, this.slingshot.projectile.y, 0.12)
+      targetZoom = SLINGSHOT_CAMERA_DRAG_ZOOM
+    }
+
+    if (this.slingshot.projectileLaunched && this.slingshot.projectile) {
+      focusX = Phaser.Math.Linear(this.slingshot.levelFocus.x - 44, this.slingshot.projectile.x + 80, 0.72)
+      focusY = Phaser.Math.Linear(this.slingshot.levelFocus.y, this.slingshot.projectile.y - 10, 0.44)
+      targetZoom = SLINGSHOT_CAMERA_FLIGHT_ZOOM
+    }
+
+    if (this.slingshot.transitioning) {
+      targetZoom = 1.08
+    }
+
+    this.applySlingshotCameraTarget(
+      {
+        x: Phaser.Math.Clamp(focusX, 480, 780),
+        y: Phaser.Math.Clamp(focusY, 220, 356),
+      },
+      targetZoom,
+    )
+  }
+
+  private snapSlingshotCameraTo(focus: { x: number; y: number }, zoom: number): void {
+    const camera = this.cameras.main
+    camera.setZoom(zoom)
+    const { scrollX, scrollY } = this.computeCameraScrollForFocus(focus, zoom)
+    camera.setScroll(scrollX, scrollY)
+  }
+
+  private applySlingshotCameraTarget(focus: { x: number; y: number }, zoom: number): void {
+    const camera = this.cameras.main
+    const nextZoom = Phaser.Math.Linear(camera.zoom, zoom, 0.08)
+    const { scrollX, scrollY } = this.computeCameraScrollForFocus(focus, nextZoom)
+    camera.setZoom(nextZoom)
+    camera.setScroll(
+      Phaser.Math.Linear(camera.scrollX, scrollX, 0.08),
+      Phaser.Math.Linear(camera.scrollY, scrollY, 0.08),
+    )
+  }
+
+  private computeCameraScrollForFocus(focus: { x: number; y: number }, zoom: number): { scrollX: number; scrollY: number } {
+    const viewportWidth = this.cameras.main.width / zoom
+    const viewportHeight = this.cameras.main.height / zoom
+
+    return {
+      scrollX: Phaser.Math.Clamp(focus.x - viewportWidth / 2, 0, GAME_WIDTH - viewportWidth),
+      scrollY: Phaser.Math.Clamp(focus.y - viewportHeight / 2, 0, GAME_HEIGHT - viewportHeight),
     }
   }
 
@@ -1355,6 +1501,7 @@ class GeneratedGameScene extends Phaser.Scene {
     const level = this.slingshot.levels[levelIndex]
     this.slingshot.levelIndex = levelIndex
     this.slingshot.transitioning = false
+    this.slingshot.levelFocus = this.calculateSlingshotLevelFocus(level)
     this.slingshot.levelBadge.setText(`LEVEL ${levelIndex + 1} / ${this.slingshot.levels.length}  ${level.name.toUpperCase()}`)
     this.objectiveText.setText([
       `${this.blueprint.hero.name}: ${level.note}`,
@@ -1428,7 +1575,23 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.spawnSlingshotProjectile()
+    this.playSceneCue('level-intro', levelIndex)
+    this.snapSlingshotCameraTo(this.slingshot.levelFocus, 1.08)
     this.cameras.main.flash(180, 105, 210, 199, false)
+  }
+
+  private calculateSlingshotLevelFocus(level: SlingshotLevel): { x: number; y: number } {
+    const points = [
+      ...level.blocks.map((block) => ({ x: block.x, y: block.y })),
+      ...level.targets.map((target) => ({ x: target.x, y: target.y })),
+    ]
+    const averageX = points.reduce((sum, point) => sum + point.x, 0) / points.length
+    const averageY = points.reduce((sum, point) => sum + point.y, 0) / points.length
+
+    return {
+      x: Phaser.Math.Clamp(averageX + 8, 520, 786),
+      y: Phaser.Math.Clamp(averageY + 32, 226, 356),
+    }
   }
 
   private advanceSlingshotLevel(): void {
@@ -1449,6 +1612,7 @@ class GeneratedGameScene extends Phaser.Scene {
       `Next: ${nextLevel.note}`,
     ])
     this.statusText.setText(`Chamber ${this.slingshot.levelIndex + 1} cleared   Score ${this.score}`)
+    this.playSceneCue('level-clear', this.slingshot.levelIndex)
     this.time.delayedCall(1100, () => {
       if (!this.gameEnded) {
         this.loadSlingshotLevel(this.slingshot!.levelIndex + 1)
@@ -1538,6 +1702,7 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
+    this.unlockAudio()
     const pointerPosition = this.getPointerGamePosition(pointer)
     const projectile = this.slingshot.projectile
     const projectileDistance = Phaser.Math.Distance.Between(
@@ -1618,6 +1783,7 @@ class GeneratedGameScene extends Phaser.Scene {
     if (this.keys.S.isDown || this.keys.DOWN.isDown) inputY += 1
 
     if (inputX !== 0 || inputY !== 0) {
+      this.unlockAudio()
       const delta = this.game.loop.delta / 1000
       const vector = new Phaser.Math.Vector2(inputX, inputY).normalize().scale(260 * delta)
       const nextX = this.slingshot.projectile.x + vector.x
@@ -1628,6 +1794,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+      this.unlockAudio()
       this.releaseSlingshotProjectile()
     }
   }
@@ -1690,6 +1857,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.matter.body.setStatic(projectile.body, false)
     this.matter.body.setVelocity(projectile.body, { x: velocity.x, y: velocity.y })
     this.matter.body.setAngularVelocity(projectile.body, Phaser.Math.Clamp(velocity.length() * 0.0032, -0.22, 0.22))
+    this.playLaunchAudio(Phaser.Math.Clamp(pull.length() / SLINGSHOT_MAX_PULL, 0, 1))
     this.emitImpactBurst(projectile.x, projectile.y, this.blueprint.palette.accent, 12, 42)
     this.cameras.main.shake(70, 0.0025)
   }
@@ -2079,6 +2247,9 @@ class GeneratedGameScene extends Phaser.Scene {
 
     target.lastImpactAt = this.time.now
     target.integrity -= damage
+    if (target.integrity > 0) {
+      this.playOrbitCoreAudio('hit', Phaser.Math.Clamp(damage / 6, 0.18, 1), x)
+    }
     const remaining = Phaser.Math.Clamp(target.integrity / target.maxIntegrity, 0, 1)
     target.shape.art?.setTintFill(remaining < 0.45 ? parseColor('#ffffff') : parseColor(this.blueprint.palette.accentAlt))
     target.shape.glow?.setAlpha(0.18 + (1 - remaining) * 0.28)
@@ -2113,6 +2284,9 @@ class GeneratedGameScene extends Phaser.Scene {
 
     block.lastImpactAt = this.time.now
     block.integrity -= damage
+    if (block.integrity > 0) {
+      this.playMaterialAudio(block.material, Phaser.Math.Clamp(damage / 7.5, 0.18, 1), x)
+    }
     const fractureLevel = 1 - Phaser.Math.Clamp(block.integrity / block.maxIntegrity, 0, 1)
 
     if (fractureLevel > block.fractureLevel + 0.16) {
@@ -2138,6 +2312,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.addScore(30)
+    this.playOrbitCoreAudio('release', 1, x)
     this.emitImpactBurst(x, y, this.blueprint.palette.accentAlt, 24, 86, 0.9)
     target.shape.art?.destroy()
     target.shape.shadow?.destroy()
@@ -2158,6 +2333,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.addScore(block.material === 'glass' ? 4 : 2)
+    this.playMaterialAudio(block.material, 1, x)
     this.emitImpactBurst(x, y, SLINGSHOT_MATERIAL_STATS[block.material].particleColor, block.material === 'glass' ? 20 : 12, 66, 0.82)
     block.shape.art?.destroy()
     block.shape.shadow?.destroy()
@@ -2248,6 +2424,205 @@ class GeneratedGameScene extends Phaser.Scene {
       .setScale(glowPulse)
       .setAlpha(glowAlpha)
       .setDepth(depth - 1)
+  }
+
+  private unlockAudio(): void {
+    const context = this.getAudioContext()
+    if (context?.state === 'suspended') {
+      void context.resume()
+    }
+  }
+
+  private getAudioContext(): AudioContext | null {
+    if (typeof window === 'undefined') {
+      return null
+    }
+
+    if (!this.audioContext) {
+      const AudioCtor = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioCtor) {
+        return null
+      }
+
+      this.audioContext = new AudioCtor()
+    }
+
+    return this.audioContext
+  }
+
+  private playSceneCue(kind: 'level-intro' | 'level-clear' | 'run-win' | 'run-lose', variation = 0): void {
+    if (kind === 'level-intro') {
+      const accent = 320 + variation * 32
+      this.playTone({ frequency: accent, duration: 0.12, volume: 0.035, type: 'triangle', slideTo: accent * 0.92, pan: -0.12 })
+      this.playTone({ frequency: accent * 1.5, duration: 0.18, volume: 0.03, type: 'sine', slideTo: accent * 1.68, pan: 0.06, delay: 0.04 })
+      return
+    }
+
+    if (kind === 'level-clear') {
+      this.playTone({ frequency: 360 + variation * 16, duration: 0.18, volume: 0.04, type: 'triangle', slideTo: 420 + variation * 18, pan: -0.08 })
+      this.playTone({ frequency: 520 + variation * 12, duration: 0.34, volume: 0.03, type: 'sine', slideTo: 610 + variation * 10, pan: 0.12, delay: 0.05 })
+      return
+    }
+
+    if (kind === 'run-win') {
+      this.playTone({ frequency: 392, duration: 0.18, volume: 0.04, type: 'triangle', slideTo: 440, pan: -0.08 })
+      this.playTone({ frequency: 524, duration: 0.24, volume: 0.034, type: 'sine', slideTo: 588, pan: 0.1, delay: 0.08 })
+      this.playTone({ frequency: 660, duration: 0.34, volume: 0.032, type: 'sine', slideTo: 784, pan: 0.18, delay: 0.16 })
+      return
+    }
+
+    this.playTone({ frequency: 220, duration: 0.22, volume: 0.05, type: 'sawtooth', slideTo: 132, pan: -0.06 })
+    this.playTone({ frequency: 164, duration: 0.32, volume: 0.028, type: 'triangle', slideTo: 96, pan: 0.04, delay: 0.04 })
+  }
+
+  private playLaunchAudio(tension: number): void {
+    this.playTone({
+      frequency: Phaser.Math.Linear(180, 260, tension),
+      duration: 0.12,
+      volume: 0.055,
+      type: 'triangle',
+      slideTo: Phaser.Math.Linear(120, 170, tension),
+      pan: -0.18,
+    })
+    this.playTone({
+      frequency: Phaser.Math.Linear(420, 560, tension),
+      duration: 0.2,
+      volume: 0.034,
+      type: 'sine',
+      slideTo: Phaser.Math.Linear(300, 380, tension),
+      pan: 0.08,
+      delay: 0.02,
+    })
+  }
+
+  private playMaterialAudio(material: SlingshotMaterial, intensity: number, x: number): void {
+    const pan = Phaser.Math.Clamp((x - GAME_WIDTH / 2) / (GAME_WIDTH / 2), -0.75, 0.75)
+
+    if (material === 'glass') {
+      this.playTone({
+        frequency: Phaser.Math.Linear(720, 980, intensity),
+        duration: 0.1,
+        volume: 0.038 + intensity * 0.02,
+        type: 'square',
+        slideTo: Phaser.Math.Linear(300, 420, intensity),
+        pan,
+      })
+      this.playTone({
+        frequency: Phaser.Math.Linear(1100, 1480, intensity),
+        duration: 0.14,
+        volume: 0.022 + intensity * 0.016,
+        type: 'sine',
+        slideTo: Phaser.Math.Linear(740, 920, intensity),
+        pan: pan * 0.8,
+        delay: 0.01,
+      })
+      return
+    }
+
+    if (material === 'brass') {
+      this.playTone({
+        frequency: Phaser.Math.Linear(240, 340, intensity),
+        duration: 0.24,
+        volume: 0.038 + intensity * 0.024,
+        type: 'triangle',
+        slideTo: Phaser.Math.Linear(220, 310, intensity),
+        pan,
+      })
+      this.playTone({
+        frequency: Phaser.Math.Linear(420, 560, intensity),
+        duration: 0.34,
+        volume: 0.026 + intensity * 0.018,
+        type: 'sine',
+        slideTo: Phaser.Math.Linear(360, 470, intensity),
+        pan: pan * 0.7,
+        delay: 0.03,
+      })
+      return
+    }
+
+    this.playTone({
+      frequency: Phaser.Math.Linear(120, 170, intensity),
+      duration: 0.14,
+      volume: 0.034 + intensity * 0.02,
+      type: 'sawtooth',
+      slideTo: Phaser.Math.Linear(82, 120, intensity),
+      pan,
+    })
+    this.playTone({
+      frequency: Phaser.Math.Linear(150, 210, intensity),
+      duration: 0.08,
+      volume: 0.02 + intensity * 0.012,
+      type: 'triangle',
+      slideTo: Phaser.Math.Linear(104, 150, intensity),
+      pan: pan * 0.55,
+      delay: 0.02,
+    })
+  }
+
+  private playOrbitCoreAudio(kind: 'hit' | 'release', intensity: number, x: number): void {
+    const pan = Phaser.Math.Clamp((x - GAME_WIDTH / 2) / (GAME_WIDTH / 2), -0.8, 0.8)
+
+    if (kind === 'release') {
+      this.playTone({ frequency: 480, duration: 0.14, volume: 0.042, type: 'sine', slideTo: 540, pan, delay: 0 })
+      this.playTone({ frequency: 720, duration: 0.28, volume: 0.032, type: 'triangle', slideTo: 860, pan: pan * 0.72, delay: 0.04 })
+      this.playTone({ frequency: 980, duration: 0.36, volume: 0.02, type: 'sine', slideTo: 1180, pan: pan * 0.4, delay: 0.09 })
+      return
+    }
+
+    this.playTone({
+      frequency: Phaser.Math.Linear(420, 620, intensity),
+      duration: 0.1,
+      volume: 0.028 + intensity * 0.014,
+      type: 'sine',
+      slideTo: Phaser.Math.Linear(380, 520, intensity),
+      pan,
+    })
+  }
+
+  private playTone(options: {
+    frequency: number
+    duration: number
+    volume: number
+    type: OscillatorType
+    slideTo?: number
+    pan?: number
+    delay?: number
+  }): void {
+    const context = this.getAudioContext()
+    if (!context || context.state !== 'running') {
+      return
+    }
+
+    const now = context.currentTime + (options.delay ?? 0)
+    if (now - this.lastSfxAt < 0.006) {
+      return
+    }
+    this.lastSfxAt = now
+
+    const oscillator = context.createOscillator()
+    const gain = context.createGain()
+    const panner = 'createStereoPanner' in context ? context.createStereoPanner() : null
+    oscillator.type = options.type
+    oscillator.frequency.setValueAtTime(options.frequency, now)
+    if (options.slideTo) {
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(24, options.slideTo), now + options.duration)
+    }
+
+    gain.gain.setValueAtTime(0.0001, now)
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, options.volume), now + 0.012)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + options.duration)
+
+    oscillator.connect(gain)
+    if (panner) {
+      panner.pan.value = options.pan ?? 0
+      gain.connect(panner)
+      panner.connect(context.destination)
+    } else {
+      gain.connect(context.destination)
+    }
+
+    oscillator.start(now)
+    oscillator.stop(now + options.duration + 0.03)
   }
 
   private prepareAstralCutoutTextures(): void {
@@ -2458,6 +2833,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.gameEnded = true
+    this.playSceneCue(won ? 'run-win' : 'run-lose')
     this.statusText.setText(won ? 'STATUS: PLAYABLE PROTOTYPE ONLINE' : 'STATUS: LOOP COLLAPSED')
     this.objectiveText.setText([summary, this.blueprint.approximationStrategy])
 
