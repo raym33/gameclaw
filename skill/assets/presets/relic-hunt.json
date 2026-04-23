@@ -1,0 +1,50 @@
+{
+  "preset": "relic-hunt",
+  "runtimeProfile": "relic-hunt",
+  "targetSlice": "premium",
+  "systems": {
+    "camera": "top-down",
+    "movement": "free-8dir",
+    "physics": "scripted-arcade",
+    "combat": "pulse-burst",
+    "objective": "collect",
+    "worldLayout": "relic-field",
+    "specialMechanic": "rewind-dash"
+  },
+  "physics": {
+    "gravity": 0.0,
+    "bounce": 0.04,
+    "friction": 0.14,
+    "drag": 0.1,
+    "projectilePower": 18,
+    "structuralIntegrity": 0.5
+  },
+  "camera": {
+    "mode": "top-down soft-follow",
+    "composition": "Favor clarity of relic routes, hazards, and safe return paths.",
+    "zoom": {
+      "idle": 1.0,
+      "dash": 1.03,
+      "threat": 1.05
+    }
+  },
+  "hud": {
+    "priorities": ["relic count", "health or shield", "ability readiness"],
+    "style": "ornamental but restrained, never blocking navigation edges"
+  },
+  "assetShotList": [
+    "player move, burst, dash, and recovery family",
+    "relic family and pickup glow states",
+    "hazard or enemy family",
+    "dash trail and collection effects",
+    "field props, navigation landmarks, and floor kit",
+    "checkpoint or safe-zone surfaces",
+    "HUD counters and ability badge"
+  ],
+  "playtestFocus": [
+    "route clarity",
+    "collection satisfaction",
+    "dash readability",
+    "hazard contrast against floor art"
+  ]
+}

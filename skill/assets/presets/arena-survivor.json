@@ -1,0 +1,50 @@
+{
+  "preset": "arena-survivor",
+  "runtimeProfile": "arena-survivor",
+  "targetSlice": "premium",
+  "systems": {
+    "camera": "top-down",
+    "movement": "free-8dir",
+    "physics": "scripted-arcade",
+    "combat": "auto-shoot",
+    "objective": "survive",
+    "worldLayout": "arena",
+    "specialMechanic": "combo-chain"
+  },
+  "physics": {
+    "gravity": 0.0,
+    "bounce": 0.08,
+    "friction": 0.12,
+    "drag": 0.08,
+    "projectilePower": 21,
+    "structuralIntegrity": 0.55
+  },
+  "camera": {
+    "mode": "top-down follow",
+    "composition": "Keep the player slightly low-center with incoming threats readable at spawn distance.",
+    "zoom": {
+      "idle": 1.0,
+      "combat": 1.04,
+      "burst": 1.08
+    }
+  },
+  "hud": {
+    "priorities": ["health", "cooldown rhythm", "score or survival timer"],
+    "style": "compact plate, high contrast, never wider than the action lane"
+  },
+  "assetShotList": [
+    "player idle and strafe family",
+    "2 enemy families with distinct silhouettes",
+    "primary attack projectile or burst effect",
+    "pickup or reward effect",
+    "arena floor kit and border dressing",
+    "damage flash and hit particles",
+    "HUD plate and key counters"
+  ],
+  "playtestFocus": [
+    "diagonal movement readability",
+    "enemy pressure pacing",
+    "pickup satisfaction",
+    "screen clutter vs clarity"
+  ]
+}

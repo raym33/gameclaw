@@ -1,0 +1,50 @@
+{
+  "preset": "lane-runner",
+  "runtimeProfile": "lane-runner",
+  "targetSlice": "commercial-looking",
+  "systems": {
+    "camera": "side-view",
+    "movement": "lane-switch",
+    "physics": "scripted-arcade",
+    "combat": "none",
+    "objective": "finish-run",
+    "worldLayout": "lanes",
+    "specialMechanic": "combo-chain"
+  },
+  "physics": {
+    "gravity": 0.46,
+    "bounce": 0.0,
+    "friction": 0.1,
+    "drag": 0.02,
+    "projectilePower": 0,
+    "structuralIntegrity": 0.45
+  },
+  "camera": {
+    "mode": "side-view fixed-ahead",
+    "composition": "Keep obstacle read time generous and let the horizon rhythm carry the scene.",
+    "zoom": {
+      "idle": 1.02,
+      "speed": 1.05,
+      "boost": 1.08
+    }
+  },
+  "hud": {
+    "priorities": ["distance", "score chain", "lives or fail state"],
+    "style": "thin, fast-read, top-safe layout with no debug text feel"
+  },
+  "assetShotList": [
+    "runner idle, run, lane-switch, jump or stumble family",
+    "3 obstacle families with readable silhouettes",
+    "pickup family and collection burst",
+    "lane markers or path rhythm props",
+    "foreground and background parallax kit",
+    "fail, near-miss, and combo feedback",
+    "HUD plate, score badge, and pause surface"
+  ],
+  "playtestFocus": [
+    "lane commitment speed",
+    "obstacle read time",
+    "pickup feedback intensity",
+    "parallax density vs visual noise"
+  ]
+}

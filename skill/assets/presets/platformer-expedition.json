@@ -1,0 +1,50 @@
+{
+  "preset": "platformer-expedition",
+  "runtimeProfile": "platformer-expedition",
+  "targetSlice": "commercial-looking",
+  "systems": {
+    "camera": "side-view",
+    "movement": "platformer",
+    "physics": "scripted-arcade",
+    "combat": "projectile-shot",
+    "objective": "finish-run",
+    "worldLayout": "platform-route",
+    "specialMechanic": "rewind-dash"
+  },
+  "physics": {
+    "gravity": 0.72,
+    "bounce": 0.0,
+    "friction": 0.18,
+    "drag": 0.012,
+    "projectilePower": 20,
+    "structuralIntegrity": 0.58
+  },
+  "camera": {
+    "mode": "side-view follow with look-ahead",
+    "composition": "Show landing zones, hazards, and the next jump before the player needs them.",
+    "zoom": {
+      "idle": 1.02,
+      "run": 1.04,
+      "setpiece": 1.08
+    }
+  },
+  "hud": {
+    "priorities": ["health", "collectibles", "checkpoint or ability state"],
+    "style": "small, cinematic, aligned to screen edges away from jump arcs"
+  },
+  "assetShotList": [
+    "hero idle, run, jump, fall, land, attack, and recovery family",
+    "enemy patrol family and readable threat state",
+    "projectile or ability effect family",
+    "platform tile kit, hazard kit, and landmark props",
+    "pickup, checkpoint, and portal or goal surfaces",
+    "landing dust, hit sparks, and trail effects",
+    "HUD plate, collectible badge, and fail or restart surface"
+  ],
+  "playtestFocus": [
+    "jump timing and forgiveness",
+    "camera look-ahead quality",
+    "landing readability",
+    "enemy silhouette against environment"
+  ]
+}

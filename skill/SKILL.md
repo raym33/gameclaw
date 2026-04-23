@@ -50,7 +50,7 @@ Classify the request before editing:
 ## Production Workflow
 
 1. Reduce the ask to `fantasy + core loop + camera + movement + physics + win state`.
-2. Choose the runtime profile and the nearest genre playbook.
+2. Choose the runtime profile, the nearest genre playbook, and the nearest preset kit.
 3. Build the smallest stable playable loop.
 4. Create the asset shot list for what is visible during the core minute of play.
 5. Generate or refine the asset family so the screen reads as one coherent product.
@@ -80,6 +80,7 @@ Load only what is needed:
 - For store-facing visual density and commercial presentation, read [app-store-quality.md](references/app-store-quality.md).
 - For movement, camera, input, and physics feel, read [game-feel.md](references/game-feel.md).
 - For genre-specific implementation priorities, read [genre-playbooks.md](references/genre-playbooks.md).
+- For reusable runtime defaults and asset shot lists, read [preset-kits.md](references/preset-kits.md).
 - For turning references into final asset families, read [production-loop.md](references/production-loop.md).
 - For browser playtest gates, read [playtest-matrix.md](references/playtest-matrix.md).
 - For Ollama, LM Studio, OpenAI-compatible setup, read [local-ai.md](references/local-ai.md).

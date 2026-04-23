@@ -6,6 +6,8 @@ Use this when the user idea is clear but the execution path is still fuzzy. Pick
 
 Use when the fantasy depends on readable character motion.
 
+Preset kit: `skill/assets/presets/platformer-expedition.json`
+
 - Core loop: move, jump/dash/attack, avoid hazards, reach goal.
 - Must feel good first: acceleration, jump timing, landing recovery, enemy readability.
 - Minimum asset set: idle, move, jump/air, action, recovery, landing cue, enemy, hazard, pickup, environment kit.
@@ -14,6 +16,8 @@ Use when the fantasy depends on readable character motion.
 ## Top-Down Action / Arena
 
 Use when the game is about spacing, pressure, and cadence.
+
+Preset kit: `skill/assets/presets/arena-survivor.json`
 
 - Core loop: move, aim or auto-aim, attack, survive waves, collect.
 - Must feel good first: diagonal movement, attack cadence, hit response, enemy approach timing.
@@ -24,6 +28,8 @@ Use when the game is about spacing, pressure, and cadence.
 
 Use when the game should read instantly and play in short sessions.
 
+Preset kit: `skill/assets/presets/lane-runner.json`
+
 - Core loop: dodge, swap, jump, collect, chain.
 - Must feel good first: input commitment, obstacle readability, pickup feedback, camera composition.
 - Minimum asset set: runner states, obstacle families, pickup feedback, lane markers or environment rhythm props, clean HUD.
@@ -33,6 +39,8 @@ Use when the game should read instantly and play in short sessions.
 
 Use when the loop is pull, aim, release, collapse, and repeat.
 
+Preset kit: `skill/assets/presets/slingshot-destruction.json`
+
 - Core loop: drag, preview, launch, chain reactions, conserve shots.
 - Must feel good first: believable grab radius, matched trajectory preview, recoil, material readability.
 - Minimum asset set: character pull/release states, launcher, projectile, targets, breakable material families, impact and debris feedback, chamber backdrop.
@@ -41,6 +49,8 @@ Use when the loop is pull, aim, release, collapse, and repeat.
 ## Puzzle / Physics Casual
 
 Use when clarity matters more than raw spectacle.
+
+Preset kit: `skill/assets/presets/relic-hunt.json`
 
 - Core loop: inspect, act, resolve, reset, improve.
 - Must feel good first: state clarity, reset speed, legible object interactions, low input friction.

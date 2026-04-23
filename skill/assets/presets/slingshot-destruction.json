@@ -1,0 +1,50 @@
+{
+  "preset": "slingshot-destruction",
+  "runtimeProfile": "slingshot-destruction",
+  "targetSlice": "commercial-looking",
+  "systems": {
+    "camera": "side-view",
+    "movement": "slingshot",
+    "physics": "matter-rigid-body",
+    "combat": "projectile-shot",
+    "objective": "destroy-targets",
+    "worldLayout": "fortress-stack",
+    "specialMechanic": "destructible-structures"
+  },
+  "physics": {
+    "gravity": 0.58,
+    "bounce": 0.12,
+    "friction": 0.016,
+    "drag": 0.003,
+    "projectilePower": 27,
+    "structuralIntegrity": 0.92
+  },
+  "camera": {
+    "mode": "side-view composed slingshot framing",
+    "composition": "Keep launcher, projectile arc, and collapse target readable in the same shot whenever possible.",
+    "zoom": {
+      "idle": 1.04,
+      "drag": 1.08,
+      "flight": 1.11
+    }
+  },
+  "hud": {
+    "priorities": ["shots remaining", "targets remaining", "chamber progress"],
+    "style": "ornamental compact plates, clear against sky or chamber backgrounds"
+  },
+  "assetShotList": [
+    "character idle, brace, pull, release, and recovery family",
+    "launcher or slingshot family",
+    "projectile family with loaded and flying readability",
+    "target family and 3 material families for breakables",
+    "chamber backdrop with foreground and depth dressing",
+    "trajectory dots, impact burst, debris, and recoil effects",
+    "HUD badges, chamber label, and retry or fail surface"
+  ],
+  "playtestFocus": [
+    "grab radius credibility",
+    "trajectory preview accuracy",
+    "material differentiation",
+    "collapse readability and follow-through"
+  ]
+}
