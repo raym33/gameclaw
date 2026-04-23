@@ -120,7 +120,7 @@ Example prompt:
 Use $gameclaw to turn these sketches, sprites and notes into a polished playable browser vertical slice with professional movement, sprites, physics, and all missing images generated and integrated.
 ```
 
-The skill teaches Codex how to work with this repo, including runtime profiles, local AI backends, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
+The skill teaches Codex how to work with this repo, including runtime profiles, genre playbooks, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
 
 Install from the repo root:
 

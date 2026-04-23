@@ -1,71 +1,74 @@
 ---
 name: gameclaw
-description: Use when working with the Gameclaw repo or when a user wants Codex to turn game sketches, sprites, screenshots, handwritten notes, moodboards, or rough mechanics into a polished playable browser vertical slice faster than a generic Codex workflow. Covers Gameclaw architecture, blueprint generation, Phaser/Matter runtimes, production-quality movement and physics, pixel-perfect visual rules, sprite fidelity, complete asset coverage, local Ollama/LM Studio or OpenAI-compatible backends, validation, and publishing changes to raym33/gameclaw.
+description: Use when working with the Gameclaw repo or when a user wants Codex to turn game sketches, sprites, screenshots, handwritten notes, moodboards, or rough mechanics into a polished playable browser vertical slice faster than a generic Codex workflow. Covers Gameclaw architecture, blueprint generation, Phaser/Matter runtimes, production-quality movement and physics, pixel-perfect visual rules, sprite fidelity, complete asset coverage, genre playbooks, local Ollama/LM Studio or OpenAI-compatible backends, validation, and publishing changes to raym33/gameclaw.
 ---
 
 # Gameclaw
 
-Use this skill to get from messy references to a small game that already feels intentional: coherent art direction, clean controls, reliable physics, readable HUD, and motion that does not scream prototype.
+Use this skill when the user wants a game that is not only playable, but presentable: coherent art direction, smooth controls, readable feedback, reliable physics, and enough visual finish that the slice does not look like a prototype.
 
-The point of this skill is speed with quality. If using `$gameclaw` does not help Codex reach a stronger playable slice faster than an unstructured workflow, the skill is failing.
+The point of `$gameclaw` is speed with quality. If using it does not get Codex to a stronger vertical slice faster than an unstructured workflow, the skill is failing.
 
-For polished or sellable requests, Codex must treat art production as core implementation work. Missing or weak visuals are not an excuse to ship primitives, mismatched crops, or thin animation coverage.
-For app-store-style requests, aim for a commercial-looking slice: detailed screens, cohesive asset families, readable moment-to-moment feedback, and enough finish that the first minute could plausibly belong on a store page.
+For polished, sellable, or app-store-style requests, treat art production as core implementation work. Missing sprites, weak effects, sparse screens, bad transitions, or placeholder HUD surfaces are product bugs.
 
-## Start Here
+## Target Output
 
-1. Find or clone the repo: `https://github.com/raym33/gameclaw`.
-2. Run `git status --short` before editing and preserve unrelated user changes.
-3. Classify the request:
-   - **Blueprint/AI**: `server/blueprint.ts`, `server/openai.ts`, `shared/game.ts`
-   - **API/upload**: `server/index.ts`, `src/lib/api.ts`
-   - **UI/demo shell**: `src/App.tsx`, `src/index.css`
-   - **Playable runtime**: `src/game/createGame.ts`
-   - **Curated demo/assets**: `server/demo.ts`, `demo-inputs/sample-user`, `src/assets/astral-orchard`
-   - **Skill packaging**: `skill/SKILL.md`, `skill/agents/openai.yaml`, `skill/references/*`
-4. Choose the target output:
-   - **Playable slice**: fast, stable, readable.
-   - **Premium slice**: default when the user asks for polished, smooth, sellable, professional, studio-quality, or pixel-perfect results.
-   - **Commercial-looking slice**: use when the user wants the result to resemble games sold on app stores, with denser visuals, stronger presentation, and more detail in the playable screen.
-5. Implement the smallest stable playable slice first, then reserve time for feel and polish. Do not generate broad, unbounded game architecture.
-6. Validate with `npm run lint` and `npm run build` unless the change is documentation-only.
+Default to one of these:
+
+- **Playable slice**: fast, stable, readable.
+- **Premium slice**: polished, smooth, professional, studio-quality, pixel-perfect.
+- **Commercial-looking slice**: app-store-style detail density, stronger presentation, richer asset families, better screenshot and trailer survival.
+
+Default to a small, excellent slice over a broad, unfinished game.
+
+## Work Areas
+
+Classify the request before editing:
+
+- **Blueprint/AI**: `server/blueprint.ts`, `server/openai.ts`, `shared/game.ts`
+- **API/upload**: `server/index.ts`, `src/lib/api.ts`
+- **UI/demo shell**: `src/App.tsx`, `src/index.css`
+- **Playable runtime**: `src/game/createGame.ts`
+- **Curated demo/assets**: `server/demo.ts`, `demo-inputs/sample-user`, `src/assets/astral-orchard`
+- **Skill packaging**: `skill/SKILL.md`, `skill/agents/openai.yaml`, `skill/references/*`
 
 ## Operating Rules
 
 - Prefer stable systems over freeform generated code.
-- Let AI choose intent, systems, parameters, and backlog; let code and engines execute gameplay.
-- Default to one polished room, encounter, or loop over a wide but generic game.
-- Keep physics real: use Phaser arcade-style logic for simple profiles and Matter for rigid-body destruction.
-- Keep visuals honest: use user-provided, curated, or generated raster sprites before procedural placeholders when visual fidelity matters.
-- For polished or sellable output, generate and integrate the full minimum image set needed for the loop to feel professional: character states, gameplay props, projectiles, impacts, and presentation surfaces.
-- Do not ration image generation effort when missing art is the reason the slice still looks cheap or moves badly.
-- If the user wants an app-store-quality result, push detail density: layered backgrounds, richer props, better UI surfaces, stronger effects, and more complete animation coverage in the main loop.
-- Do not use procedural character rigs unless the user explicitly requests them.
+- Let AI choose intent, systems, tuning targets, art direction, and backlog. Let code and the engine execute gameplay.
+- Pick the nearest runtime profile instead of inventing a broad new architecture.
+- Keep physics honest: use Matter when rigid-body interaction is the feature, not as decoration.
+- Use user-provided, curated, or generated raster assets before procedural placeholders when final visual quality matters.
+- For polished or commercial-looking output, generate and integrate the missing image set required for the loop: character states, props, projectiles, impacts, HUD surfaces, and effects.
+- Do not ration image generation effort if thin visual coverage is the reason the slice still looks cheap.
+- Do not use procedural character rigs unless the user explicitly asks for them.
 - If motion reads badly because sprite coverage is too thin, add or regenerate sprites instead of tweening incompatible poses.
-- Do not stop at “it compiles.” Movement, collisions, timing, trajectory preview, camera, and animation readability must all be checked.
-- If the user asks for pixel art or pixel-perfect visuals, lock the rendering decisions to that mode and keep sprite scale, filtering, and motion crisp.
-- If the user asks for professional quality, spend time on the polish pass: anticipation, recovery, camera readability, VFX, impact feedback, and input edge cases.
-- Trajectory previews and live launches must use the same motion model.
-- Pointer release outside the canvas should still resolve the action cleanly when the mechanic depends on drag-and-release.
-- If a concept cannot be fully generated, return a playable vertical slice plus clear approximation/backlog.
+- Trajectory previews and live launches must share the same motion model.
+- Pointer release outside the canvas should still resolve cleanly when the mechanic depends on drag-and-release.
+- Do not stop at “it compiles.” Movement, collisions, timing, camera, animation readability, and feedback must be checked.
 
-## Fast Workflow
+## Production Workflow
 
-1. Reduce the request to `fantasy + core loop + camera + movement + physics + win state`.
-2. Pick the nearest runtime profile instead of inventing a new architecture.
-3. Make the loop playable with the minimum stable systems.
-4. Run an asset coverage pass:
-   - character states and transitions
-   - environment, props, targets, and projectiles
-   - impact, trail, or hit feedback art
-   - HUD surfaces that belong in the final presentation layer
-5. Run a polish pass:
-   - movement and acceleration/deceleration
-   - jump, dash, slingshot, or attack feel
-   - sprite readability and scale consistency
-   - camera, HUD, particles, recoil, hit response
-   - collision edge cases and failure states
-6. Leave a short backlog only after the slice is already worth playing.
+1. Reduce the ask to `fantasy + core loop + camera + movement + physics + win state`.
+2. Choose the runtime profile and the nearest genre playbook.
+3. Build the smallest stable playable loop.
+4. Create the asset shot list for what is visible during the core minute of play.
+5. Generate or refine the asset family so the screen reads as one coherent product.
+6. Integrate assets into gameplay bodies and UI surfaces.
+7. Tune game feel: anticipation, recovery, hit response, timing, camera, particles, readable failure states.
+8. Validate with browser playtest checks, `npm run lint`, and `npm run build` unless the change is docs-only.
+9. Leave backlog only after the slice is already worth showing.
+
+## Mandatory Deliverables
+
+Before calling the task done, the slice should have:
+
+- one stable, readable core loop
+- one clear art direction
+- enough asset coverage for the visible gameplay to feel intentional in motion
+- controls and failure states that make sense without hand-holding from the developer
+- a main screen that looks composed on purpose
+- a short backlog of real remaining gaps, not hidden problems
 
 ## Reference Loading
 
@@ -76,6 +79,9 @@ Load only what is needed:
 - For minimum final asset coverage and when to generate more art, read [asset-coverage.md](references/asset-coverage.md).
 - For store-facing visual density and commercial presentation, read [app-store-quality.md](references/app-store-quality.md).
 - For movement, camera, input, and physics feel, read [game-feel.md](references/game-feel.md).
+- For genre-specific implementation priorities, read [genre-playbooks.md](references/genre-playbooks.md).
+- For turning references into final asset families, read [production-loop.md](references/production-loop.md).
+- For browser playtest gates, read [playtest-matrix.md](references/playtest-matrix.md).
 - For Ollama, LM Studio, OpenAI-compatible setup, read [local-ai.md](references/local-ai.md).
 - For sprites, cutouts, animation, and Astral Orchard visual rules, read [visual-fidelity.md](references/visual-fidelity.md).
 
@@ -96,11 +102,6 @@ http://localhost:5173
 http://localhost:5173/?demo=astral-orchard
 http://localhost:3001/api/health
 http://localhost:3001/api/demo/astral-orchard
-```
-
-Production build URL after `npm run start`:
-
-```text
 http://localhost:3001/?demo=astral-orchard
 ```
 
@@ -110,16 +111,12 @@ http://localhost:3001/?demo=astral-orchard
 - `npm run build` passes.
 - `/api/health` returns the active backend or fallback state.
 - `/api/demo/astral-orchard` returns a valid generation result.
-- The canvas appears.
-- The requested control loop works in browser.
+- The canvas appears and the loop works in browser.
 - Sprite, camera, and physics changes are visually checked, not only type-checked.
-- The asset set is complete enough that the core loop no longer depends on placeholder presentation.
-- Frequently seen character states have dedicated sprites instead of one pose stretched across the whole loop.
-- If the target is commercial-looking, the main playable screen has enough visual density and finish to survive a store-page screenshot or short trailer clip.
-- Mouse, keyboard, and drag-release edge cases are checked if the game depends on them.
-- Trajectory preview matches real launch behavior when a projectile mechanic exists.
-- There are no placeholder circles/rectangles left in a slice that is supposed to look polished.
-- If the style is pixel art, sprite filtering and scale are visually crisp in browser.
+- The core loop no longer depends on placeholder presentation.
+- Frequently seen states have dedicated visual coverage.
+- If the target is commercial-looking, the main playable screen can survive a store screenshot or a short trailer clip.
+- Mouse, keyboard, and drag-release edge cases are checked when relevant.
 - Remaining quality gaps are called out as backlog, not hidden.
 
 ## Installing This Skill
@@ -139,7 +136,7 @@ $gameclaw
 Example:
 
 ```text
-Use $gameclaw to turn these uploaded sketches and sprites into a polished playable browser vertical slice with studio-quality movement, sprites, physics, and all missing images generated and integrated.
+Use $gameclaw to turn these uploaded sketches, sprites, and mechanics into a polished playable browser vertical slice with commercial-looking visuals, professional movement, reliable physics, and all missing assets generated and integrated.
 ```
 
 ## Publishing
@@ -147,5 +144,5 @@ Use $gameclaw to turn these uploaded sketches and sprites into a polished playab
 When the user asks to publish changes:
 
 1. Commit only relevant files.
-2. Use a focused message, e.g. `Improve Gameclaw skill`.
+2. Use a focused message.
 3. Push to `origin main` for `raym33/gameclaw`.
