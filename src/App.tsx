@@ -200,6 +200,9 @@ export default function App() {
     return (
       <main className="demo-fullscreen-shell">
         <div className="demo-hud-overlay">
+          <span className="demo-direct-status">
+            {result ? 'WASD/flechas, clic para moverte, ESPACIO para interactuar' : 'Cargando el juego...'}
+          </span>
           <button className="secondary-button" type="button" onClick={requestFullscreen}>
             Pantalla completa
           </button>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { GameBlueprint } from '../../shared/game'
 
@@ -9,6 +9,7 @@ type GameCanvasProps = {
 export function GameCanvas({ blueprint }: GameCanvasProps) {
   const targetRef = useRef<HTMLDivElement | null>(null)
   const gameRef = useRef<{ destroy(removeCanvas?: boolean): void } | null>(null)
+  const [runtimeError, setRuntimeError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!targetRef.current) {
@@ -16,19 +17,26 @@ export function GameCanvas({ blueprint }: GameCanvasProps) {
     }
 
     let cancelled = false
+    setRuntimeError(null)
 
     void (async () => {
-      const [{ default: Phaser }, { createGameConfig }] = await Promise.all([
-        import('phaser'),
-        import('../game/createGame'),
-      ])
+      try {
+        const [{ default: Phaser }, { createGameConfig }] = await Promise.all([
+          import('phaser'),
+          import('../game/createGame'),
+        ])
 
-      if (cancelled || !targetRef.current) {
-        return
+        if (cancelled || !targetRef.current) {
+          return
+        }
+
+        gameRef.current?.destroy(true)
+        gameRef.current = new Phaser.Game(createGameConfig(targetRef.current, blueprint))
+      } catch (caughtError) {
+        if (!cancelled) {
+          setRuntimeError(caughtError instanceof Error ? caughtError.message : 'No se pudo arrancar el runtime del juego.')
+        }
       }
-
-      gameRef.current?.destroy(true)
-      gameRef.current = new Phaser.Game(createGameConfig(targetRef.current, blueprint))
     })()
 
     return () => {
@@ -38,5 +46,10 @@ export function GameCanvas({ blueprint }: GameCanvasProps) {
     }
   }, [blueprint])
 
-  return <div className="game-shell" ref={targetRef} />
+  return (
+    <>
+      <div className="game-shell" ref={targetRef} />
+      {runtimeError ? <div className="demo-runtime-error">Error del juego: {runtimeError}</div> : null}
+    </>
+  )
 }

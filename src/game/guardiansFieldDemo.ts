@@ -514,6 +514,7 @@ class GuardiansBootScene extends GuardiansBaseScene {
 
 class GuardiansTitleScene extends GuardiansBaseScene {
   private creditsCard?: Phaser.GameObjects.Container
+  private sceneStarted = false
 
   constructor(blueprint: GameBlueprint) {
     super(TITLE_SCENE_KEY, blueprint)
@@ -558,14 +559,31 @@ class GuardiansTitleScene extends GuardiansBaseScene {
     this.add.image(722, 208, butterflyTextureKey(0)).setDisplaySize(72, 72).setDepth(32)
 
     this.createButton(VIEW_WIDTH / 2, 376, 274, 'Jugar', () => {
-      this.scene.start(TUTORIAL_SCENE_KEY)
+      this.startTutorial()
     })
     this.createButton(VIEW_WIDTH / 2, 454, 274, 'Como Jugar', () => {
-      this.scene.start(TUTORIAL_SCENE_KEY)
+      this.startTutorial()
     }, '#84df9f')
     this.createButton(VIEW_WIDTH / 2, 518, 274, 'Creditos', () => {
       this.toggleCredits()
     }, '#ffd66d').container.setScale(0.92)
+
+    this.input.keyboard?.once('keydown-ENTER', () => this.startTutorial())
+    this.input.keyboard?.once('keydown-SPACE', () => this.startTutorial())
+    this.input.on('pointerdown', (_pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {
+      if (gameObjects.length === 0) {
+        this.startTutorial()
+      }
+    })
+  }
+
+  private startTutorial(): void {
+    if (this.sceneStarted || this.creditsCard) {
+      return
+    }
+
+    this.sceneStarted = true
+    this.scene.start(TUTORIAL_SCENE_KEY)
   }
 
   private toggleCredits(): void {
@@ -595,6 +613,8 @@ class GuardiansTitleScene extends GuardiansBaseScene {
 }
 
 class GuardiansTutorialScene extends GuardiansBaseScene {
+  private sceneStarted = false
+
   constructor(blueprint: GameBlueprint) {
     super(TUTORIAL_SCENE_KEY, blueprint)
   }
@@ -634,8 +654,25 @@ class GuardiansTutorialScene extends GuardiansBaseScene {
     this.add.image(850, 360, ECO_TEXTURES['eco-farm']).setDisplaySize(124, 124).setDepth(26)
 
     this.createButton(VIEW_WIDTH / 2, 500, 288, 'Entrar al Campo', () => {
-      this.scene.start(FARM_SCENE_KEY)
+      this.startFarm()
     })
+
+    this.input.keyboard?.once('keydown-ENTER', () => this.startFarm())
+    this.input.keyboard?.once('keydown-SPACE', () => this.startFarm())
+    this.input.once('pointerdown', (_pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {
+      if (gameObjects.length === 0) {
+        this.startFarm()
+      }
+    })
+  }
+
+  private startFarm(): void {
+    if (this.sceneStarted) {
+      return
+    }
+
+    this.sceneStarted = true
+    this.scene.start(FARM_SCENE_KEY)
   }
 }
 
@@ -876,7 +913,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
         _localY: number,
         event: Phaser.Types.Input.EventData,
       ) => {
-        event.stopPropagation()
+        event?.stopPropagation?.()
         if (this.popupTask) {
           return
         }
