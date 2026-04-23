@@ -14,6 +14,8 @@ Common game type kits: `treasure-route-platformer`, `precision-climb-platformer`
 - Minimum asset set: idle, move, jump/air, action, recovery, landing cue, enemy, hazard, pickup, environment kit.
 - Common failure: adding level breadth before the character is fun to control.
 
+For platformer-first asks, load `skill/assets/templates/platformer-production.json`.
+
 ## Top-Down Action / Arena
 
 Use when the game is about spacing, pressure, and cadence.

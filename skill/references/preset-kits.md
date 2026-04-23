@@ -2,7 +2,7 @@
 
 Use this when Codex needs concrete starting defaults instead of reinventing camera, feel, HUD, and asset coverage from scratch.
 
-If the request is educational or about gamification, load `skill/assets/templates/education-gamification.json` alongside the chosen preset.
+If the request is educational, about gamification, or clearly platformer-first, load the matching template alongside the chosen preset.
 
 ## What These Presets Are
 
@@ -57,6 +57,12 @@ Show the education template:
 
 ```bash
 ./skill/scripts/show-template.sh education-gamification
+```
+
+Show the platformer template:
+
+```bash
+./skill/scripts/show-template.sh platformer-production
 ```
 
 ## Rule

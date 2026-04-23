@@ -1,0 +1,75 @@
+{
+  "template": "platformer-production",
+  "targetSlice": "commercial-looking",
+  "goal": "Turn a platformer idea, side-scroller brief, metroidvania-flavored sketch, or character-action reference pack into a polished browser slice with strong movement, readable jumps, convincing recovery, and a screenshot-ready main screen.",
+  "primaryMapping": {
+    "runtimeProfile": "platformer-expedition",
+    "gameTypeKit": "treasure-route-platformer",
+    "useWhen": "The user wants a broad adventure platformer, a readable route through landmarks, or a collectible-first side-scrolling slice."
+  },
+  "alternativeMappings": [
+    {
+      "runtimeProfile": "platformer-expedition",
+      "gameTypeKit": "precision-climb-platformer",
+      "useWhen": "The ask is about exact jumps, Celeste-like recovery beats, chapter climbs, or a more demanding traversal fantasy."
+    },
+    {
+      "runtimeProfile": "platformer-expedition",
+      "gameTypeKit": "combat-gauntlet-platformer",
+      "useWhen": "The ask leans more into patrol pressure, ranged threats, blasters, or action-platformer combat pockets."
+    }
+  ],
+  "movementPriorities": {
+    "mustFeelGoodFirst": [
+      "acceleration and deceleration",
+      "jump takeoff and landing readability",
+      "air control without floaty mush",
+      "fast recovery after mistakes"
+    ],
+    "forgivenessRules": [
+      "bias toward cleaner landings instead of harsh edge drops",
+      "keep restart speed high if the route is precision-heavy",
+      "avoid cluttering the jump arc with UI or VFX noise"
+    ]
+  },
+  "cameraAndScreen": {
+    "camera": "side-view follow with useful look-ahead",
+    "composition": "Show the next landing zone, the next hazard, and enough parallax to feel premium without hiding gameplay reads.",
+    "mainScreenGoal": "The first playable screen should survive as an app-store screenshot or a five-second trailer clip."
+  },
+  "routeDesign": {
+    "core": [
+      "move through a readable sequence of jumps and landmarks",
+      "collect or secure a clear route objective",
+      "finish the slice with one memorable traversal beat"
+    ],
+    "chapterShape": [
+      "opening onboarding jump",
+      "mid-route pressure or precision check",
+      "final payoff jump, relic, or exit gate"
+    ]
+  },
+  "assetShotList": [
+    "hero idle, run, jump, fall, land, action, and recovery family",
+    "enemy or hazard family with strong silhouette separation",
+    "platform tile kit and landmark prop kit",
+    "pickup, checkpoint, exit gate, and route-signaling surfaces",
+    "landing dust, jump trail, hit sparks, and recovery feedback",
+    "HUD plate, collectible badge, fail surface, and chapter clear surface"
+  ],
+  "artDirection": {
+    "look": "bold silhouettes, strong foreground-midground-background separation, cinematic but readable color hierarchy",
+    "ui": "small but premium, aligned away from jump arcs and hazard reads",
+    "fx": "landing dust, recoil, route guidance, and completion payoffs should feel intentional rather than noisy"
+  },
+  "playtestFocus": [
+    "is the character fun to control before more content is added",
+    "are landings readable at speed",
+    "does the camera show the next decision early enough",
+    "do the sprites and platform kit hold together as one product family"
+  ],
+  "approximationNotes": [
+    "If the user asks for a full metroidvania, world map, ability tree, or boss pipeline, keep the first slice focused on one route and one hero verb set.",
+    "Do not fake breadth before the base movement is presentable."
+  ]
+}
