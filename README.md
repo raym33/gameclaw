@@ -35,7 +35,7 @@ The system favors stable playable slices over pretending it can generate any ful
 - Treat game feel and visual integration as implementation work, not polish-afterthoughts.
 - For commercial-looking output, push detail density on the main screen instead of stopping at a technically correct prototype.
 
-The repo now also includes runtime preset templates in `src/game/runtimeTemplates.ts`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, burst tuning, and slingshot camera behavior instead of rediscovering them every time.
+The repo now also includes reusable runtime presets and scene scaffolds in `src/game/runtimeTemplates.ts` and `src/game/runtimeSceneScaffold.ts`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, finish overlays, and slingshot camera behavior instead of rediscovering them every time.
 
 ## Stack
 
@@ -122,7 +122,7 @@ Example prompt:
 Use $gameclaw to turn these sketches, sprites and notes into a polished playable browser vertical slice with professional movement, sprites, physics, and all missing images generated and integrated.
 ```
 
-The skill teaches Codex how to work with this repo, including runtime profiles, executable preset kits by genre, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
+The skill teaches Codex how to work with this repo, including runtime profiles, executable preset kits by genre, reusable scene scaffolds, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
 
 Install from the repo root:
 

@@ -21,7 +21,7 @@ They are not final values. They are good defaults for:
 - asset shot lists
 - playtest focus
 
-The runtime layer now also has a matching preset registry in `src/game/runtimeTemplates.ts` for timers, HUD defaults, player body presets, burst tuning, and slingshot camera behavior.
+The runtime layer now also has a matching preset registry in `src/game/runtimeTemplates.ts` and reusable scene scaffold helpers in `src/game/runtimeSceneScaffold.ts` for timers, HUD defaults, player body presets, finish overlays, support text, and slingshot camera behavior.
 
 ## How To Use Them
 

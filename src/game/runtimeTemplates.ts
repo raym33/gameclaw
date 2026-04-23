@@ -43,6 +43,12 @@ export type RuntimeSceneTemplate = {
     supportMode: HudSupportMode
     restartText?: string
   }
+  finishOverlay: {
+    winStatus: string
+    loseStatus: string
+    winTitle: string
+    loseTitle: string
+  }
   player?: PlayerBodyPreset
   burst: {
     radius: number
@@ -67,6 +73,12 @@ export const RUNTIME_SCENE_TEMPLATES: Record<RuntimeProfile, RuntimeSceneTemplat
       objectiveWrapWidth: 440,
       supportMode: 'runtime-summary',
     },
+    finishOverlay: {
+      winStatus: 'STATUS: WAVE CLEARED',
+      loseStatus: 'STATUS: RETRY READY',
+      winTitle: 'SURVIVAL COMPLETE',
+      loseTitle: 'TRY AGAIN',
+    },
     player: {
       shape: 'circle',
       spawn: { x: 480, y: 324 },
@@ -88,6 +100,12 @@ export const RUNTIME_SCENE_TEMPLATES: Record<RuntimeProfile, RuntimeSceneTemplat
       objectiveFontSize: '12px',
       objectiveWrapWidth: 440,
       supportMode: 'runtime-summary',
+    },
+    finishOverlay: {
+      winStatus: 'STATUS: RUN CLEAR',
+      loseStatus: 'STATUS: RETRY READY',
+      winTitle: 'RUN COMPLETE',
+      loseTitle: 'TRY AGAIN',
     },
     player: {
       shape: 'circle',
@@ -111,6 +129,12 @@ export const RUNTIME_SCENE_TEMPLATES: Record<RuntimeProfile, RuntimeSceneTemplat
       objectiveWrapWidth: 440,
       supportMode: 'runtime-summary',
     },
+    finishOverlay: {
+      winStatus: 'STATUS: OBJECTIVE COMPLETE',
+      loseStatus: 'STATUS: RETRY READY',
+      winTitle: 'RELICS SECURED',
+      loseTitle: 'TRY AGAIN',
+    },
     player: {
       shape: 'circle',
       spawn: { x: 480, y: 324 },
@@ -132,6 +156,12 @@ export const RUNTIME_SCENE_TEMPLATES: Record<RuntimeProfile, RuntimeSceneTemplat
       objectiveFontSize: '12px',
       objectiveWrapWidth: 440,
       supportMode: 'runtime-summary',
+    },
+    finishOverlay: {
+      winStatus: 'STATUS: OBJECTIVE COMPLETE',
+      loseStatus: 'STATUS: RETRY READY',
+      winTitle: 'LEVEL COMPLETE',
+      loseTitle: 'TRY AGAIN',
     },
     player: {
       shape: 'rectangle',
@@ -156,6 +186,12 @@ export const RUNTIME_SCENE_TEMPLATES: Record<RuntimeProfile, RuntimeSceneTemplat
       objectiveWrapWidth: 346,
       supportMode: 'restart-fullscreen',
       restartText: 'R reinicia la run · F alterna pantalla completa',
+    },
+    finishOverlay: {
+      winStatus: 'STATUS: CHAMBER CLEAR',
+      loseStatus: 'STATUS: RETRY READY',
+      winTitle: 'CHAMBER COLLAPSED',
+      loseTitle: 'TRY AGAIN',
     },
     burst: {
       radius: 120,

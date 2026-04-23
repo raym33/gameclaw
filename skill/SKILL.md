@@ -30,6 +30,7 @@ Classify the request before editing:
 - **UI/demo shell**: `src/App.tsx`, `src/index.css`
 - **Playable runtime**: `src/game/createGame.ts`
 - **Runtime templates**: `src/game/runtimeTemplates.ts`
+- **Runtime scaffolds**: `src/game/runtimeSceneScaffold.ts`
 - **Curated demo/assets**: `server/demo.ts`, `demo-inputs/sample-user`, `src/assets/astral-orchard`
 - **Skill packaging**: `skill/SKILL.md`, `skill/agents/openai.yaml`, `skill/references/*`
 
@@ -38,6 +39,7 @@ Classify the request before editing:
 - Prefer stable systems over freeform generated code.
 - Let AI choose intent, systems, tuning targets, art direction, and backlog. Let code and the engine execute gameplay.
 - Pick the nearest runtime profile instead of inventing a broad new architecture.
+- Reuse and extend the existing runtime templates and scene scaffolds before adding new one-off scene wiring to `createGame.ts`.
 - Keep physics honest: use Matter when rigid-body interaction is the feature, not as decoration.
 - Use user-provided, curated, or generated raster assets before procedural placeholders when final visual quality matters.
 - For polished or commercial-looking output, generate and integrate the missing image set required for the loop: character states, props, projectiles, impacts, HUD surfaces, and effects.

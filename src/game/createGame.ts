@@ -9,12 +9,17 @@ import astralWoodBeamUrl from '../assets/astral-orchard/wood-beam.png'
 import astralWoodSupportUrl from '../assets/astral-orchard/wood-support.png'
 
 import {
-  RUNTIME_LABELS,
   deriveRuntimeProfile,
   type GameBlueprint,
   type GamePalette,
   type RuntimeProfile,
 } from '../../shared/game'
+import {
+  createRuntimeFinishOverlay,
+  createRuntimeHud,
+  createRuntimePlayer,
+  resolveFinishStatus,
+} from './runtimeSceneScaffold'
 import { getRuntimeSceneTemplate, type RuntimeSceneTemplate } from './runtimeTemplates'
 
 const GAME_WIDTH = 960
@@ -576,52 +581,10 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private createHud(): void {
-    const hud = this.runtimeTemplate.hud
-    this.add
-      .rectangle(20, 18, hud.panelWidth, hud.panelHeight, 0x081014, 0.5)
-      .setOrigin(0, 0)
-      .setDepth(28)
-      .setStrokeStyle(1, parseColor(this.blueprint.palette.accentAlt), 0.12)
-
-    this.add
-      .text(28, 24, this.blueprint.title.toUpperCase(), {
-        fontFamily: 'IBM Plex Mono, monospace',
-        fontSize: hud.titleFontSize,
-        color: this.blueprint.palette.accent,
-      })
-      .setAlpha(0.95)
-      .setDepth(30)
-
-    this.statusText = this.add.text(28, 50, '', {
-      fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: hud.statusFontSize,
-      color: this.blueprint.palette.text,
-    })
-    this.statusText.setDepth(30)
-
-    this.objectiveText = this.add.text(28, 84, '', {
-      fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: hud.objectiveFontSize,
-      color: '#d7d0c5',
-      wordWrap: { width: hud.objectiveWrapWidth },
-    })
-    this.objectiveText.setDepth(30)
-
-    this.supportText = this.add.text(28, GAME_HEIGHT - 26, '', {
-      fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: '11px',
-      color: this.blueprint.palette.accentAlt,
-    })
-    this.supportText.setDepth(30)
-    this.supportText.setText(this.resolveHudSupportText())
-  }
-
-  private resolveHudSupportText(): string {
-    if (this.runtimeTemplate.hud.supportMode === 'restart-fullscreen') {
-      return this.runtimeTemplate.hud.restartText ?? 'R reinicia la run · F alterna pantalla completa'
-    }
-
-    return `${RUNTIME_LABELS[this.runtimeProfile]} / ${this.blueprint.supportLevel.toUpperCase()} / ${this.blueprint.noveltyHook}`
+    const hud = createRuntimeHud(this, this.runtimeTemplate, this.blueprint, this.runtimeProfile, GAME_HEIGHT)
+    this.statusText = hud.statusText
+    this.objectiveText = hud.objectiveText
+    this.supportText = hud.supportText
   }
 
   private drawBackdrop(palette: GamePalette): void {
@@ -693,36 +656,14 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private createPlayer(): void {
-    const playerPreset = this.runtimeTemplate.player
-    if (!playerPreset) {
+    const player = createRuntimePlayer(this, this.runtimeTemplate, this.blueprint)
+    if (!player) {
       return
     }
 
-    if (playerPreset.shape === 'rectangle') {
-      const player = this.add.rectangle(
-        playerPreset.spawn.x,
-        playerPreset.spawn.y,
-        playerPreset.width,
-        playerPreset.height,
-        parseColor(this.blueprint.palette.accent),
-      )
-      player.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.8)
-      this.player = player
-      this.playerHalfWidth = playerPreset.width / 2
-      this.playerHalfHeight = playerPreset.height / 2
-      return
-    }
-
-    const player = this.add.circle(
-      playerPreset.spawn.x,
-      playerPreset.spawn.y,
-      playerPreset.radius,
-      parseColor(this.blueprint.palette.accent),
-    )
-    player.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.8)
-    this.player = player
-    this.playerHalfWidth = playerPreset.radius
-    this.playerHalfHeight = playerPreset.radius
+    this.player = player.player
+    this.playerHalfWidth = player.halfWidth
+    this.playerHalfHeight = player.halfHeight
   }
 
   private createArenaSurvivor(): void {
@@ -2927,30 +2868,9 @@ class GeneratedGameScene extends Phaser.Scene {
 
     this.gameEnded = true
     this.playSceneCue(won ? 'run-win' : 'run-lose')
-    this.statusText.setText(won ? 'STATUS: PLAYABLE PROTOTYPE ONLINE' : 'STATUS: LOOP COLLAPSED')
+    this.statusText.setText(resolveFinishStatus(this.runtimeTemplate, won))
     this.objectiveText.setText([summary, this.blueprint.approximationStrategy])
-
-    this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 460, 140, parseColor(this.blueprint.palette.surface), 0.92)
-      .setStrokeStyle(2, parseColor(won ? this.blueprint.palette.accentAlt : this.blueprint.palette.danger), 0.95)
-
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 24, won ? 'PROTOTYPE STABLE' : 'TRY AGAIN', {
-        fontFamily: 'Space Grotesk, sans-serif',
-        fontSize: '28px',
-        color: this.blueprint.palette.text,
-      })
-      .setOrigin(0.5)
-
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 22, summary, {
-        fontFamily: 'IBM Plex Mono, monospace',
-        fontSize: '13px',
-        color: '#d7d0c5',
-        align: 'center',
-        wordWrap: { width: 380 },
-      })
-      .setOrigin(0.5)
+    createRuntimeFinishOverlay(this, this.runtimeTemplate, this.blueprint.palette, won, summary, GAME_WIDTH, GAME_HEIGHT)
   }
 
   private bumpCombo(): void {
