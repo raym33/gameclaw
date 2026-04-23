@@ -2,7 +2,7 @@
 
 Use this when Codex needs concrete starting defaults instead of reinventing camera, feel, HUD, and asset coverage from scratch.
 
-If the request is educational, about gamification, or clearly platformer-first, load the matching template alongside the chosen preset.
+If the request is educational, about gamification, clearly platformer-first, or falling-block-puzzle-first, load the matching template alongside the chosen preset or runtime decision.
 
 ## What These Presets Are
 
@@ -63,6 +63,12 @@ Show the platformer template:
 
 ```bash
 ./skill/scripts/show-template.sh platformer-production
+```
+
+Show the falling-block template:
+
+```bash
+./skill/scripts/show-template.sh falling-block-puzzle
 ```
 
 ## Rule

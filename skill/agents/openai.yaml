@@ -2,7 +2,7 @@ interface:
   display_name: "Gameclaw"
   short_description: "Game references to commercial-looking playable slices"
   brand_color: "#F3BF63"
-  default_prompt: "Use $gameclaw to turn my sketches, sprites, notes, and mechanics into a commercial-looking playable browser vertical slice. Choose the right runtime profile, game type kit, genre playbook, and runtime scaffold; if the ask is educational or gamified, load the education template; if it is platformer-first, load the platformer template; then generate and integrate every missing asset family and push movement, physics, visuals, and screen presentation to app-store quality."
+  default_prompt: "Use $gameclaw to turn my sketches, sprites, notes, and mechanics into a commercial-looking playable browser vertical slice. Choose the right runtime profile, game type kit, genre playbook, and runtime scaffold; if the ask is educational or gamified, load the education template; if it is platformer-first, load the platformer template; if it is falling-block-puzzle-first, load the falling-block template and stay honest about runtime limits; then generate and integrate every missing asset family and push movement, physics, visuals, and screen presentation to app-store quality."
 
 policy:
   allow_implicit_invocation: true

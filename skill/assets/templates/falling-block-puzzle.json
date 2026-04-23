@@ -1,0 +1,51 @@
+{
+  "template": "falling-block-puzzle",
+  "targetSlice": "premium",
+  "goal": "Turn a falling-block, stack-clearing, or line-clear puzzle brief into a polished browser slice with clean board readability, fast input response, satisfying clears, and a strong one-more-run loop.",
+  "currentRepoStatus": {
+    "hasNativeRuntime": false,
+    "defaultSupportLevel": "approximate",
+    "rule": "If the request depends on authentic falling blocks, grid rotation, line clears, hold, next queue, gravity scaling, or stack-height tension, do not fake it with an unrelated runtime. Open a dedicated runtime path instead."
+  },
+  "preferredPath": {
+    "action": "add-or-scope-runtime",
+    "useWhen": "The user truly wants a stacker or line-clear game, not just a puzzle-flavored skin.",
+    "mustHaveSystems": [
+      "grid board representation",
+      "piece spawn and gravity curve",
+      "rotation or kick rules",
+      "lock delay or placement window",
+      "line clear detection",
+      "next queue and optional hold",
+      "clear, combo, and fail-state feedback"
+    ]
+  },
+  "safeApproximation": {
+    "useWhen": "The user only needs the visual language, progression shape, or polished puzzle presentation while the exact stacker runtime is still out of scope.",
+    "rule": "State clearly that the slice is puzzle-inspired rather than a true falling-block implementation."
+  },
+  "presentationTargets": {
+    "screenRead": "The player should understand stack danger, placement options, and clear rewards at a glance.",
+    "feel": "Inputs should feel immediate; clears should read as reward, not bookkeeping.",
+    "sessionLoop": "Short sessions, instant restarts, obvious mastery ramp."
+  },
+  "assetShotList": [
+    "board frame and background scene",
+    "tile or block family with readable color hierarchy",
+    "next queue and hold UI surfaces",
+    "line clear, combo, and danger-state effects",
+    "pause, fail, and chapter clear surfaces",
+    "score, level, and streak HUD treatment"
+  ],
+  "playtestFocus": [
+    "input latency and piece readability",
+    "board clarity under pressure",
+    "line clear satisfaction",
+    "danger-state communication",
+    "restart speed and one-more-run pull"
+  ],
+  "approximationNotes": [
+    "Do not use trademarked names or directly copy a specific commercial ruleset verbatim.",
+    "If the current repo cannot support the true loop yet, scope honestly and call out the missing runtime work as backlog instead of pretending the design is solved."
+  ]
+}

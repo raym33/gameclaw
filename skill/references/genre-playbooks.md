@@ -66,6 +66,19 @@ Common game type kits: `learning-relic-quest`, `maze-relic-scavenger`, `pressure
 
 For educational or gamified requests, `learning-relic-quest` is usually the first stable fit before inventing a bespoke edtech runtime.
 
+## Board / Falling-Block Puzzle
+
+Use when the game lives or dies on board logic, falling tension, and line clears.
+
+Template asset: `skill/assets/templates/falling-block-puzzle.json`
+
+- Core loop: read board, place piece, clear lines, survive pressure.
+- Must feel good first: input latency, rotation readability, drop pacing, clear feedback.
+- Minimum asset set: board frame, tile family, next and hold UI, combo or clear effects, danger state, fail and restart surfaces.
+- Common failure: skinning a generic puzzle without implementing the actual stacker loop.
+
+Current repo note: there is no native falling-block runtime yet. For authentic asks, this template should push Codex toward a dedicated runtime instead of an unrelated approximation.
+
 ## Hybrid Or Unclear Ideas
 
 If the request mixes several genres:

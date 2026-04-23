@@ -8,7 +8,7 @@ The goal is not “any game”. The goal is getting to a small game that already
 
 If the target is “like the games people buy on app stores”, Gameclaw should push toward that too: more detailed screens, stronger visual hierarchy, richer props and effects, and a playable slice that can survive screenshots and short trailer clips.
 
-It can also be aimed at educational or gamified products, and now includes a reusable platformer-focused production template for side-scrollers, route-based platformers, and tighter precision slices.
+It can also be aimed at educational or gamified products, includes a reusable platformer-focused production template for side-scrollers and precision slices, and now ships a dedicated falling-block puzzle template for stacker-style requests.
 
 ## What This Repo Is
 
@@ -38,7 +38,7 @@ The system favors stable playable slices over pretending it can generate any ful
 - Treat game feel and visual integration as implementation work, not polish-afterthoughts.
 - For commercial-looking output, push detail density on the main screen instead of stopping at a technically correct prototype.
 
-The repo now also includes reusable runtime presets, scene scaffolds, game type catalogs, and reusable product templates in `src/game/runtimeTemplates.ts`, `src/game/runtimeSceneScaffold.ts`, `shared/gameTypeKits.ts`, `src/game/gameTypeStageLayouts.ts`, `skill/assets/templates/education-gamification.json`, and `skill/assets/templates/platformer-production.json`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, finish overlays, stage layouts, gameplay tuning, educational gamification loops, and platformer production direction instead of rediscovering them every time.
+The repo now also includes reusable runtime presets, scene scaffolds, game type catalogs, and reusable product templates in `src/game/runtimeTemplates.ts`, `src/game/runtimeSceneScaffold.ts`, `shared/gameTypeKits.ts`, `src/game/gameTypeStageLayouts.ts`, `skill/assets/templates/education-gamification.json`, `skill/assets/templates/platformer-production.json`, and `skill/assets/templates/falling-block-puzzle.json`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, finish overlays, stage layouts, gameplay tuning, educational gamification loops, platformer production direction, and falling-block puzzle scoping instead of rediscovering them every time.
 
 ## Stack
 
@@ -125,7 +125,7 @@ Example prompt:
 Use $gameclaw to turn these sketches, sprites and notes into a polished playable browser vertical slice with professional movement, sprites, physics, and all missing images generated and integrated.
 ```
 
-The skill teaches Codex how to work with this repo, including runtime profiles, executable game type kits, preset kits by genre, reusable scene scaffolds, educational/gamification templates, platformer production templates, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
+The skill teaches Codex how to work with this repo, including runtime profiles, executable game type kits, preset kits by genre, reusable scene scaffolds, educational/gamification templates, platformer production templates, falling-block puzzle templates, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
 
 Install from the repo root:
 

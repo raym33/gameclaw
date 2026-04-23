@@ -45,6 +45,7 @@ Classify the request before editing:
 - After choosing the runtime profile, pick the nearest executable game type kit so the slice does not fall back to the same generic tuning and layout every time.
 - For educational or gamified asks, load the education template and bias toward mastery, streaks, soft retries, and readable content surfaces instead of combat-first loops.
 - For platformer-first asks, load the platformer template and bias toward movement quality, landing readability, route composition, and sprite coverage before chasing breadth.
+- For falling-block or stacker asks, load the falling-block template and do not fake an authentic line-clear game with an unrelated runtime. If the brief truly depends on board logic, scope a dedicated runtime path.
 - Reuse and extend the existing runtime templates and scene scaffolds before adding new one-off scene wiring to `createGame.ts`.
 - Keep physics honest: use Matter when rigid-body interaction is the feature, not as decoration.
 - Use user-provided, curated, or generated raster assets before procedural placeholders when final visual quality matters.
@@ -87,6 +88,7 @@ Load only what is needed:
 - For choosing a narrower playable product direction inside a runtime, read [game-type-kits.md](references/game-type-kits.md).
 - For educational or gamified products, read [education-gamification.md](references/education-gamification.md) and load `skill/assets/templates/education-gamification.json`.
 - For platformer-heavy products, read [platformer-production.md](references/platformer-production.md) and load `skill/assets/templates/platformer-production.json`.
+- For falling-block or stacker-heavy products, read [falling-block-puzzle.md](references/falling-block-puzzle.md) and load `skill/assets/templates/falling-block-puzzle.json`.
 - For production standards and what “good enough” means, read [quality-bar.md](references/quality-bar.md).
 - For minimum final asset coverage and when to generate more art, read [asset-coverage.md](references/asset-coverage.md).
 - For store-facing visual density and commercial presentation, read [app-store-quality.md](references/app-store-quality.md).
