@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 
 import express from 'express'
 import multer from 'multer'
@@ -12,7 +13,10 @@ import type { GenerationResult, StoredGeneration } from '../shared/game'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const IS_BUILT_SERVER = path.basename(path.dirname(__dirname)) === 'dist'
 const CLIENT_DIST = path.resolve(__dirname, '../client')
+const CLIENT_INDEX = path.join(CLIENT_DIST, 'index.html')
+const DEV_CLIENT_ORIGIN = process.env.DEV_CLIENT_ORIGIN || 'http://localhost:5173'
 
 const app = express()
 const upload = multer({
@@ -147,10 +151,16 @@ app.post('/api/generate', upload.array('files', 12), async (request, response) =
   }
 })
 
-app.use(express.static(CLIENT_DIST))
-app.use((_request, response) => {
-  response.sendFile(path.join(CLIENT_DIST, 'index.html'))
-})
+if (IS_BUILT_SERVER && existsSync(CLIENT_INDEX)) {
+  app.use(express.static(CLIENT_DIST))
+  app.use((_request, response) => {
+    response.sendFile(CLIENT_INDEX)
+  })
+} else {
+  app.use((request, response) => {
+    response.redirect(302, `${DEV_CLIENT_ORIGIN}${request.originalUrl}`)
+  })
+}
 
 const port = Number(process.env.PORT || 3001)
 app.listen(port, () => {
