@@ -80,6 +80,14 @@ type AnimalState = {
   reactionUntil: number
 }
 
+type CloudState = {
+  sprite: Phaser.GameObjects.Image
+  speed: number
+  amplitude: number
+  phase: number
+  baseY: number
+}
+
 type TaskStationState = {
   def: EcoTaskDefinition
   pedestal: Phaser.GameObjects.Ellipse
@@ -104,6 +112,14 @@ type ButtonState = {
   container: Phaser.GameObjects.Container
   background: Phaser.GameObjects.RoundedRectangle | Phaser.GameObjects.Rectangle
   label: Phaser.GameObjects.Text
+}
+
+type HeroBadgeState = {
+  role: ActorRole
+  container: Phaser.GameObjects.Container
+  frame: Phaser.GameObjects.Rectangle
+  label: Phaser.GameObjects.Text
+  portrait: Phaser.GameObjects.Image
 }
 
 const TASKS: readonly EcoTaskDefinition[] = [
@@ -305,6 +321,11 @@ abstract class GuardiansBaseScene extends Phaser.Scene {
       graphics.fillRect(0, i * (VIEW_HEIGHT / 16), VIEW_WIDTH, VIEW_HEIGHT / 16 + 2)
     }
 
+    graphics.fillStyle(parseColor('#ffffff'), 0.16)
+    graphics.fillEllipse(210, 194, 320, 54)
+    graphics.fillEllipse(732, 178, 420, 60)
+    graphics.fillEllipse(520, 248, 540, 70)
+
     graphics.fillStyle(parseColor('#d8f2bd'), 1)
     graphics.fillEllipse(180, 440, 460, 160)
     graphics.fillEllipse(510, 470, 680, 180)
@@ -312,15 +333,21 @@ abstract class GuardiansBaseScene extends Phaser.Scene {
     graphics.fillStyle(parseColor('#b9df74'), 0.82)
     graphics.fillEllipse(140, 472, 420, 120)
     graphics.fillEllipse(740, 488, 520, 120)
+    graphics.fillStyle(parseColor('#9ccf6a'), 0.54)
+    graphics.fillEllipse(130, 508, 560, 92)
+    graphics.fillEllipse(672, 514, 640, 96)
 
     graphics.fillStyle(parseColor('#ffffff'), 0.95)
     graphics.fillEllipse(162, 96, 120, 46)
     graphics.fillEllipse(232, 88, 96, 36)
     graphics.fillEllipse(742, 76, 152, 54)
     graphics.fillEllipse(812, 84, 96, 42)
+    graphics.fillEllipse(568, 126, 126, 44)
+    graphics.fillEllipse(622, 118, 88, 32)
 
     this.add.circle(828, 96, 42, parseColor('#ffe27a'), 0.98)
     this.add.circle(846, 80, 14, parseColor('#fff4b2'), 0.8)
+    this.add.circle(828, 96, 62, parseColor('#ffe27a'), 0.16)
   }
 
   protected createButton(
@@ -536,6 +563,9 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   private scoreText!: Phaser.GameObjects.Text
   private moodIcon!: Phaser.GameObjects.Text
   private guidanceText!: Phaser.GameObjects.Text
+  private nextTaskText!: Phaser.GameObjects.Text
+  private catBadge!: HeroBadgeState
+  private dogBadge!: HeroBadgeState
   private pauseOverlay?: Phaser.GameObjects.Container
   private paused = false
   private completedCount = 0
@@ -553,6 +583,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   private decorGraphics!: Phaser.GameObjects.Graphics
   private frontGraphics!: Phaser.GameObjects.Graphics
   private sparkleLayer!: Phaser.GameObjects.Particles.ParticleEmitter
+  private clouds: CloudState[] = []
 
   constructor(blueprint: GameBlueprint) {
     super(FARM_SCENE_KEY, blueprint)
@@ -588,6 +619,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.handleControls(delta)
     this.updateActor(this.cat, delta, this.activeRole === 'cat')
     this.updateActor(this.dog, delta, this.activeRole === 'dog')
+    this.updateClouds(delta)
     this.updateAnimals(delta)
     this.updateTaskStations()
     this.updateTaskPrompt()
@@ -597,10 +629,49 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   private createWorldLayers(): void {
     this.add.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, WORLD_WIDTH, WORLD_HEIGHT, parseColor('#9fe2ff'), 1).setDepth(-90)
     this.skyGraphics = this.add.graphics().setDepth(-80)
+    this.createClouds()
     this.groundGraphics = this.add.graphics().setDepth(-40)
     this.riverGraphics = this.add.graphics().setDepth(-20)
     this.decorGraphics = this.add.graphics().setDepth(-10)
     this.frontGraphics = this.add.graphics().setDepth(12)
+  }
+
+  private createClouds(): void {
+    const blueprints = [
+      { x: 180, y: 126, scale: 1.1, speed: 6, amplitude: 6, phase: 0.2 },
+      { x: 520, y: 82, scale: 0.86, speed: 8, amplitude: 4, phase: 1.1 },
+      { x: 910, y: 132, scale: 1.22, speed: 5, amplitude: 5, phase: 1.8 },
+      { x: 1280, y: 104, scale: 0.94, speed: 7, amplitude: 6, phase: 2.4 },
+      { x: 1530, y: 148, scale: 0.72, speed: 9, amplitude: 4, phase: 3.2 },
+    ] as const
+
+    this.clouds = blueprints.map((blueprint, index) => {
+      const sprite = this.add
+        .image(blueprint.x, blueprint.y, cloudTextureKey(index % 2 === 0 ? 0 : 1))
+        .setDisplaySize(184 * blueprint.scale, 88 * blueprint.scale)
+        .setAlpha(0.86)
+        .setDepth(-74 + index * 0.2)
+
+      return {
+        sprite,
+        speed: blueprint.speed,
+        amplitude: blueprint.amplitude,
+        phase: blueprint.phase,
+        baseY: blueprint.y,
+      }
+    })
+  }
+
+  private updateClouds(delta: number): void {
+    for (const cloud of this.clouds) {
+      cloud.phase += delta * 0.6
+      cloud.sprite.x += cloud.speed * delta
+      cloud.sprite.y = cloud.baseY + Math.sin(cloud.phase) * cloud.amplitude
+
+      if (cloud.sprite.x - cloud.sprite.displayWidth * 0.6 > WORLD_WIDTH) {
+        cloud.sprite.x = -cloud.sprite.displayWidth * 0.6
+      }
+    }
   }
 
   private createStaticObstacles(): void {
@@ -712,13 +783,17 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   }
 
   private createHud(): void {
-    this.add.rectangle(VIEW_WIDTH / 2, 34, 860, 58, parseColor('#fff8ef'), 0.86).setScrollFactor(0).setDepth(40)
+    this.add.rectangle(VIEW_WIDTH / 2, 36, 900, 70, parseColor('#fff8ef'), 0.9).setScrollFactor(0).setDepth(40)
       .setStrokeStyle(3, parseColor(this.blueprint.palette.accentAlt), 0.65)
+    this.add.rectangle(VIEW_WIDTH / 2, 77, 900, 22, parseColor('#17354b'), 0.08).setScrollFactor(0).setDepth(40)
+
+    this.catBadge = this.createHeroBadge(74, 36, 'cat', 'Gato')
+    this.dogBadge = this.createHeroBadge(176, 36, 'dog', 'Perro')
 
     this.progressText = this.add
-      .text(96, 34, 'Soluciones 0 / 9', {
+      .text(248, 28, 'Soluciones 0 / 9', {
         fontFamily: 'Baloo 2, Nunito, sans-serif',
-        fontSize: '26px',
+        fontSize: '24px',
         color: '#16324a',
       })
       .setOrigin(0, 0.5)
@@ -726,18 +801,29 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       .setDepth(42)
 
     this.scoreText = this.add
-      .text(390, 34, 'Puntos Eco 0', {
-        fontFamily: 'Baloo 2, Nunito, sans-serif',
-        fontSize: '26px',
+      .text(248, 54, 'Puntos Eco 0', {
+        fontFamily: 'Nunito, sans-serif',
+        fontSize: '19px',
         color: '#28536d',
       })
       .setOrigin(0, 0.5)
       .setScrollFactor(0)
       .setDepth(42)
 
+    this.nextTaskText = this.add
+      .text(514, 36, 'Siguiente: Explora el campo', {
+        fontFamily: 'Baloo 2, Nunito, sans-serif',
+        fontSize: '20px',
+        color: '#20445b',
+        wordWrap: { width: 230 },
+      })
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0)
+      .setDepth(42)
+
     this.moodIcon = this.add
-      .text(726, 34, '🙂', {
-        fontSize: '34px',
+      .text(790, 36, '🙂', {
+        fontSize: '38px',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -755,7 +841,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       .setScrollFactor(0)
       .setDepth(42)
 
-    const pause = this.createButton(868, 34, 124, 'Pausa', () => {
+    const pause = this.createButton(892, 36, 116, 'Pausa', () => {
       this.togglePause()
     }, '#84df9f')
     pause.container.setScrollFactor(0).setDepth(43).setScale(0.74)
@@ -771,6 +857,25 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       .setOrigin(0.5)
       .setDepth(34)
       .setVisible(false)
+  }
+
+  private createHeroBadge(x: number, y: number, role: ActorRole, label: string): HeroBadgeState {
+    const frame = this.add
+      .rectangle(0, 0, 82, 56, parseColor('#ffffff'), 0.78)
+      .setStrokeStyle(3, parseColor('#c5e7dd'), 0.84)
+    const portrait = this.add
+      .image(-18, -2, characterTextureKey(role, 'right', 'idle'))
+      .setDisplaySize(54, 54)
+    const text = this.add
+      .text(10, 0, label, {
+        fontFamily: 'Baloo 2, Nunito, sans-serif',
+        fontSize: '18px',
+        color: '#16324a',
+      })
+      .setOrigin(0, 0.5)
+
+    const container = this.add.container(x, y, [frame, portrait, text]).setScrollFactor(0).setDepth(42)
+    return { role, container, frame, label: text, portrait }
   }
 
   private createPopup(): void {
@@ -1089,6 +1194,16 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   private updateHud(): void {
     this.progressText.setText(`Soluciones ${this.completedCount} / 9`)
     this.scoreText.setText(`Puntos Eco ${this.ecoScore}`)
+
+    const activeBadge = this.activeRole === 'cat' ? this.catBadge : this.dogBadge
+    const restingBadge = this.activeRole === 'cat' ? this.dogBadge : this.catBadge
+    activeBadge.frame.setFillStyle(parseColor('#fff7cf'), 0.96)
+    activeBadge.frame.setStrokeStyle(3, parseColor('#57d6a1'), 0.96)
+    activeBadge.container.setScale(1.02)
+    restingBadge.frame.setFillStyle(parseColor('#ffffff'), 0.78)
+    restingBadge.frame.setStrokeStyle(3, parseColor('#c5e7dd'), 0.84)
+    restingBadge.container.setScale(0.95)
+
     if (this.completedCount < 3) {
       this.moodIcon.setText('🙂')
     } else if (this.completedCount < 6) {
@@ -1099,10 +1214,14 @@ class GuardiansFarmScene extends GuardiansBaseScene {
 
     if (this.currentTask) {
       this.guidanceText.setText(`Acercate y ayuda con: ${this.currentTask.def.label}`)
+      this.nextTaskText.setText(`Siguiente:\n${this.currentTask.def.shortLabel}`)
     } else if (this.completedCount >= TASKS.length) {
       this.guidanceText.setText('¡El campo esta casi listo para celebrar!')
+      this.nextTaskText.setText('Siguiente:\nGran celebracion')
     } else {
       this.guidanceText.setText('Explora el campo y busca otra estacion brillante.')
+      const pendingTask = this.tasks.find((task) => !task.placed)
+      this.nextTaskText.setText(`Siguiente:\n${pendingTask?.def.shortLabel ?? 'Explorar'}`)
     }
   }
 
@@ -1179,6 +1298,15 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       this.skyGraphics.fillRect(0, i * 48, WORLD_WIDTH, 48)
     }
 
+    this.skyGraphics.fillStyle(parseColor('#ffffff'), 0.18)
+    this.skyGraphics.fillEllipse(224, 232, 420, 96)
+    this.skyGraphics.fillEllipse(704, 186, 520, 112)
+    this.skyGraphics.fillEllipse(1280, 222, 460, 108)
+    this.skyGraphics.fillStyle(parseColor('#9fc4f1'), 0.22)
+    this.skyGraphics.fillEllipse(228, 284, 540, 122)
+    this.skyGraphics.fillEllipse(830, 252, 660, 138)
+    this.skyGraphics.fillEllipse(1412, 306, 610, 126)
+
     const dryGrass = parseColor('#b79156')
     const lushGrass = parseColor('#86d76a')
     const deepGrass = mixColors(lushGrass, parseColor('#5bbb50'), 0.34)
@@ -1198,6 +1326,10 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.groundGraphics.fillStyle(mixColors(parseColor('#caa372'), parseColor('#d8c58b'), progress), 0.92)
     this.groundGraphics.fillRoundedRect(162, 464, 1240, 96, 48)
     this.groundGraphics.fillRoundedRect(742, 154, 118, 820, 44)
+    this.groundGraphics.fillStyle(parseColor('#fff2c0'), 0.14)
+    for (let i = 0; i < 9; i += 1) {
+      this.groundGraphics.fillEllipse(180 + i * 170, 526 + Math.sin(i) * 8, 124, 24)
+    }
 
     const riverColor = mixColors(parseColor('#7da483'), parseColor('#69d7ff'), 0.18 + water * 0.82)
     const riverGlow = mixColors(parseColor('#91bca4'), parseColor('#bff6ff'), 0.12 + water * 0.88)
@@ -1207,22 +1339,27 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.riverGraphics.fillStyle(riverGlow, 0.34)
     this.riverGraphics.fillEllipse(1264, 526, 88, 496)
     this.riverGraphics.fillEllipse(1292, 438, 66, 220)
+    this.riverGraphics.fillStyle(parseColor('#ffffff'), 0.18)
+    for (let i = 0; i < 8; i += 1) {
+      this.riverGraphics.fillEllipse(1236 + (i % 2) * 34, 280 + i * 66, 48, 10)
+    }
 
     this.decorGraphics.fillStyle(mixColors(parseColor('#f4d26f'), parseColor('#fff0aa'), energy), 0.9)
     this.decorGraphics.fillCircle(552, 178, 44 + energy * 12)
-    this.decorGraphics.fillStyle(mixColors(parseColor('#87674f'), parseColor('#5f4834'), progress), 0.94)
-    this.decorGraphics.fillRoundedRect(188, 206, 168, 130, 24)
-    this.decorGraphics.fillStyle(mixColors(parseColor('#9c4f3c'), parseColor('#bf6c52'), energy), 0.96)
-    this.decorGraphics.fillTriangle(172, 222, 272, 144, 372, 222)
-    this.decorGraphics.fillStyle(mixColors(parseColor('#9f794d'), parseColor('#72bf56'), farm), 0.96)
-    this.decorGraphics.fillRoundedRect(292, 666, 242, 164, 28)
-    this.decorGraphics.fillStyle(mixColors(parseColor('#7d6446'), parseColor('#68b64f'), farm), 0.96)
-    this.decorGraphics.fillRoundedRect(588, 696, 188, 132, 24)
+    this.drawZoneRibbon(234, 108, 196, 'Energia Limpia', '#ffe27a')
+    this.drawZoneRibbon(1118, 100, 172, 'Agua Clara', '#7fd2ff')
+    this.drawZoneRibbon(252, 586, 208, 'Huerto Feliz', '#84df9f')
+    this.drawZoneRibbon(1008, 610, 246, 'Jardin de Insectos', '#ffb8c6')
 
-    this.decorGraphics.fillStyle(mixColors(parseColor('#8b6b56'), parseColor('#a6db77'), nature), 0.96)
-    this.decorGraphics.fillCircle(1082, 768, 118)
-    this.decorGraphics.fillCircle(1188, 846, 96)
-    this.decorGraphics.fillCircle(1324, 760, 88)
+    this.drawFarmhouse(272, 240, energy, this.taskIsPlaced('solar-panels'), this.taskIsPlaced('energy-automation'))
+    this.drawWindCluster(572, 208, energy, this.taskIsPlaced('wind-turbines'))
+    this.drawTractorPatch(530, 360, this.taskIsPlaced('solar-tractor'))
+    this.drawIrrigationBeds(1088, 280, water, this.taskIsPlaced('water-automation'))
+    this.drawPurifierGarden(1244, 492, water, this.taskIsPlaced('water-purifier'))
+    this.drawCropRows(398, 764, farm, this.taskIsPlaced('eco-farm'))
+    this.drawBarnyard(666, 784, farm, this.taskIsPlaced('eco-livestock'))
+    this.drawBugGarden(1116, 798, nature, this.taskIsPlaced('insect-control'))
+    this.drawRiverbankDetails(water)
 
     for (const tree of TREE_POSITIONS) {
       const zoneColor =
@@ -1241,6 +1378,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.drawFence(574, 724, 274, 110, farm)
     this.drawFence(1002, 698, 326, 126, nature)
     this.drawFence(1042, 194, 268, 110, water)
+    this.drawBridge(1226, 432, water)
 
     if (progress >= 0.66) {
       const rainbow = this.frontGraphics
@@ -1251,40 +1389,272 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     }
   }
 
+  private taskIsPlaced(taskId: TaskId): boolean {
+    return this.completedTaskIds.has(taskId)
+  }
+
+  private drawZoneRibbon(x: number, y: number, width: number, label: string, color: string): void {
+    this.frontGraphics.fillStyle(parseColor(color), 0.92)
+    this.frontGraphics.fillRoundedRect(x, y, width, 34, 16)
+    this.frontGraphics.fillStyle(parseColor('#ffffff'), 0.22)
+    this.frontGraphics.fillRoundedRect(x + 8, y + 6, width - 16, 10, 6)
+    this.frontGraphics.fillStyle(parseColor('#16324a'), 0.18)
+    const notchWidth = Phaser.Math.Clamp(label.length * 7, 54, width - 26)
+    this.frontGraphics.fillRoundedRect(x + (width - notchWidth) / 2, y + 17, notchWidth, 7, 3)
+  }
+
+  private drawFarmhouse(x: number, y: number, progress: number, solarPlaced: boolean, automationPlaced: boolean): void {
+    this.decorGraphics.fillStyle(parseColor('#fff2de'), 0.98)
+    this.decorGraphics.fillRoundedRect(x - 92, y - 20, 184, 132, 30)
+    this.decorGraphics.fillStyle(parseColor('#c26c51'), 0.98)
+    this.decorGraphics.fillTriangle(x - 112, y, x, y - 86, x + 112, y)
+    this.decorGraphics.fillStyle(parseColor('#af7a52'), 0.98)
+    this.decorGraphics.fillRoundedRect(x - 24, y + 32, 48, 60, 16)
+
+    for (let i = 0; i < 3; i += 1) {
+      this.decorGraphics.fillStyle(parseColor(automationPlaced ? '#ffe38a' : '#e6f0ff'), automationPlaced ? 0.96 : 0.84)
+      this.decorGraphics.fillRoundedRect(x - 70 + i * 48, y + 18, 28, 24, 8)
+    }
+
+    if (solarPlaced) {
+      this.decorGraphics.fillStyle(parseColor('#3d79b8'), 1)
+      this.decorGraphics.fillRoundedRect(x - 66, y - 34, 54, 28, 8)
+      this.decorGraphics.fillRoundedRect(x + 12, y - 42, 54, 28, 8)
+      this.decorGraphics.fillStyle(parseColor('#9fe1ff'), 0.9)
+      this.decorGraphics.fillRect(x - 60, y - 28, 42, 6)
+      this.decorGraphics.fillRect(x - 60, y - 18, 42, 6)
+      this.decorGraphics.fillRect(x + 18, y - 36, 42, 6)
+      this.decorGraphics.fillRect(x + 18, y - 26, 42, 6)
+    }
+
+    this.decorGraphics.fillStyle(mixColors(parseColor('#cfa46d'), parseColor('#88d66b'), progress), 0.96)
+    this.decorGraphics.fillRoundedRect(x - 118, y + 104, 236, 28, 12)
+  }
+
+  private drawWindCluster(x: number, y: number, progress: number, active: boolean): void {
+    this.decorGraphics.fillStyle(mixColors(parseColor('#d5b57a'), parseColor('#8cda76'), progress), 0.92)
+    this.decorGraphics.fillEllipse(x, y + 82, 210, 66)
+
+    const turbines = [
+      { x: x - 62, y: y + 26, h: 102, swing: active ? -10 : 0 },
+      { x, y: y - 8, h: 136, swing: active ? 10 : 0 },
+      { x: x + 72, y: y + 20, h: 92, swing: active ? -14 : 0 },
+    ] as const
+
+    for (const turbine of turbines) {
+      this.decorGraphics.fillStyle(parseColor('#f9fbff'), 0.98)
+      this.decorGraphics.fillRoundedRect(turbine.x - 4, turbine.y, 8, turbine.h, 4)
+      const hubY = turbine.y + 8
+      this.decorGraphics.fillCircle(turbine.x, hubY, 6)
+      this.decorGraphics.fillTriangle(turbine.x, hubY, turbine.x - 28, hubY + turbine.swing, turbine.x - 8, hubY + 10)
+      this.decorGraphics.fillTriangle(turbine.x, hubY, turbine.x + 28, hubY - turbine.swing, turbine.x + 8, hubY + 10)
+      this.decorGraphics.fillTriangle(turbine.x, hubY, turbine.x + (active ? 4 : -4), hubY + 34, turbine.x - 10, hubY + 14)
+    }
+  }
+
+  private drawTractorPatch(x: number, y: number, active: boolean): void {
+    this.decorGraphics.fillStyle(parseColor('#a27753'), 0.96)
+    this.decorGraphics.fillRoundedRect(x - 74, y - 12, 148, 84, 24)
+    this.decorGraphics.fillStyle(parseColor('#72ba54'), 1)
+    this.decorGraphics.fillRoundedRect(x - 34, y + 8, 72, 34, 12)
+    this.decorGraphics.fillCircle(x - 18, y + 52, 14)
+    this.decorGraphics.fillCircle(x + 34, y + 52, 14)
+    this.decorGraphics.fillStyle(parseColor('#4a81bb'), 1)
+    this.decorGraphics.fillRoundedRect(x - 12, y - 6, 34, 16, 6)
+    this.decorGraphics.fillStyle(parseColor(active ? '#ffe27a' : '#d5dfec'), active ? 0.96 : 0.72)
+    this.decorGraphics.fillRoundedRect(x - 6, y - 18, 22, 8, 4)
+    this.decorGraphics.fillStyle(parseColor(active ? '#fff4c6' : '#b58e67'), 0.92)
+    this.decorGraphics.fillRoundedRect(x - 84, y + 70, 168, 18, 9)
+  }
+
+  private drawIrrigationBeds(x: number, y: number, progress: number, active: boolean): void {
+    const bedColor = mixColors(parseColor('#b87f4e'), parseColor('#8dcd69'), progress * 0.72)
+    for (let row = 0; row < 4; row += 1) {
+      this.decorGraphics.fillStyle(bedColor, 0.96)
+      this.decorGraphics.fillRoundedRect(x - 92, y + row * 26, 186, 18, 9)
+      for (let i = 0; i < 7; i += 1) {
+        const stemHeight = active ? 18 + ((row + i) % 3) * 3 : 10
+        this.decorGraphics.fillStyle(parseColor('#59bf58'), active ? 0.96 : 0.62)
+        this.decorGraphics.fillRect(x - 78 + i * 26, y - stemHeight + row * 26, 4, stemHeight)
+        this.decorGraphics.fillCircle(x - 76 + i * 26, y - stemHeight - 2 + row * 26, 8)
+      }
+    }
+
+    this.decorGraphics.fillStyle(parseColor('#5ebcff'), 0.94)
+    this.decorGraphics.fillRoundedRect(x - 112, y + 22, 14, 68, 7)
+    this.decorGraphics.fillRoundedRect(x + 92, y + 22, 14, 68, 7)
+    if (active) {
+      this.decorGraphics.fillStyle(parseColor('#dff8ff'), 0.88)
+      for (let i = 0; i < 8; i += 1) {
+        this.decorGraphics.fillCircle(x - 94 + (i % 4) * 60, y + 12 + Math.floor(i / 4) * 52, 4)
+      }
+    }
+  }
+
+  private drawPurifierGarden(x: number, y: number, progress: number, active: boolean): void {
+    this.decorGraphics.fillStyle(parseColor('#6dd5c8'), 0.98)
+    this.decorGraphics.fillRoundedRect(x - 34, y - 96, 68, 146, 20)
+    this.decorGraphics.fillStyle(parseColor(active ? '#c9f2ff' : '#97c4cf'), active ? 0.96 : 0.7)
+    this.decorGraphics.fillRoundedRect(x - 24, y - 66, 48, 64, 14)
+    this.decorGraphics.fillStyle(parseColor('#89d06a'), 0.98)
+    for (let i = 0; i < 5; i += 1) {
+      this.decorGraphics.fillRect(x + 48 + i * 10, y - 18 - i * 2, 4, 34 + i * 3)
+      this.decorGraphics.fillEllipse(x + 50 + i * 10, y - 24 - i * 2, 14, 8)
+    }
+    this.decorGraphics.fillStyle(mixColors(parseColor('#7fa28e'), parseColor('#79e0ff'), 0.2 + progress * 0.8), 0.9)
+    this.decorGraphics.fillEllipse(x + 36, y + 34, 112, 40)
+  }
+
+  private drawCropRows(x: number, y: number, progress: number, active: boolean): void {
+    const cropColors = ['#7fd26a', '#ffd66d', '#ff8fa5', '#8fd2ff'] as const
+    for (let row = 0; row < 4; row += 1) {
+      this.decorGraphics.fillStyle(parseColor('#a17348'), 0.96)
+      this.decorGraphics.fillRoundedRect(x - 132, y - 64 + row * 34, 256, 22, 11)
+      for (let i = 0; i < 9; i += 1) {
+        const stemHeight = active ? 18 + ((row + i) % 3) * 4 : 8 + (i % 2) * 2
+        this.decorGraphics.fillStyle(parseColor('#53b84f'), 0.96)
+        this.decorGraphics.fillRect(x - 112 + i * 28, y - 84 + row * 34, 4, stemHeight)
+        this.decorGraphics.fillStyle(parseColor(cropColors[(row + i) % cropColors.length]), active ? 0.98 : 0.72)
+        this.decorGraphics.fillCircle(x - 110 + i * 28, y - 88 + row * 34, active ? 8 : 5)
+      }
+    }
+
+    this.decorGraphics.fillStyle(mixColors(parseColor('#d8b37a'), parseColor('#9bdc7d'), progress), 0.94)
+    this.decorGraphics.fillRoundedRect(x - 152, y + 84, 294, 22, 11)
+  }
+
+  private drawBarnyard(x: number, y: number, progress: number, active: boolean): void {
+    this.decorGraphics.fillStyle(parseColor('#bb7b50'), 0.98)
+    this.decorGraphics.fillRoundedRect(x - 94, y - 52, 188, 122, 26)
+    this.decorGraphics.fillStyle(parseColor('#8b4d3e'), 0.96)
+    this.decorGraphics.fillTriangle(x - 114, y - 26, x, y - 102, x + 114, y - 26)
+    this.decorGraphics.fillStyle(parseColor('#7ed46a'), 0.94)
+    this.decorGraphics.fillRoundedRect(x - 124, y + 76, 248, 38, 18)
+    this.decorGraphics.fillStyle(parseColor('#fff4e2'), 1)
+    this.decorGraphics.fillEllipse(x - 26, y + 20, 34, 24)
+    this.decorGraphics.fillEllipse(x + 30, y + 24, 28, 20)
+    if (active) {
+      this.decorGraphics.fillStyle(parseColor('#ffcf6f'), 0.9)
+      this.decorGraphics.fillCircle(x - 38, y - 6, 5)
+      this.decorGraphics.fillCircle(x - 14, y - 14, 4)
+      this.decorGraphics.fillCircle(x + 46, y - 4, 4)
+    }
+    this.decorGraphics.fillStyle(mixColors(parseColor('#b88a5b'), parseColor('#8fdc6f'), progress), 0.94)
+    this.decorGraphics.fillRoundedRect(x - 144, y + 112, 284, 18, 9)
+  }
+
+  private drawBugGarden(x: number, y: number, progress: number, active: boolean): void {
+    this.decorGraphics.fillStyle(mixColors(parseColor('#b78353'), parseColor('#7ddc72'), progress), 0.96)
+    this.decorGraphics.fillEllipse(x, y + 42, 286, 146)
+    for (let i = 0; i < 14; i += 1) {
+      const px = x - 120 + (i % 7) * 40
+      const py = y - 22 + Math.floor(i / 7) * 54
+      this.decorGraphics.fillStyle(parseColor('#59bf58'), 0.94)
+      this.decorGraphics.fillRect(px - 2, py - 10, 4, 24)
+      this.decorGraphics.fillStyle(parseColor(['#ff9bb0', '#ffd66d', '#84dfff', '#ffffff'][i % 4]), active ? 0.98 : 0.7)
+      this.decorGraphics.fillCircle(px, py - 14, active ? 8 : 6)
+    }
+
+    this.decorGraphics.fillStyle(parseColor('#c48f52'), 0.96)
+    this.decorGraphics.fillRoundedRect(x + 98, y - 52, 38, 84, 10)
+    this.decorGraphics.fillStyle(parseColor('#8a5d38'), 0.96)
+    for (let i = 0; i < 3; i += 1) {
+      this.decorGraphics.fillRect(x + 108, y - 42 + i * 22, 18, 12)
+    }
+
+    if (active) {
+      this.decorGraphics.fillStyle(parseColor('#ffd66d'), 1)
+      this.decorGraphics.fillEllipse(x - 12, y - 42, 18, 14)
+      this.decorGraphics.fillStyle(parseColor('#3e2f24'), 1)
+      this.decorGraphics.fillRect(x - 14, y - 48, 3, 12)
+      this.decorGraphics.fillStyle(parseColor('#ff8fb1'), 0.98)
+      this.decorGraphics.fillCircle(x + 42, y - 30, 7)
+      this.decorGraphics.fillCircle(x + 50, y - 30, 7)
+    }
+  }
+
+  private drawRiverbankDetails(progress: number): void {
+    this.frontGraphics.fillStyle(parseColor('#e8ddc2'), 0.46)
+    this.frontGraphics.fillEllipse(1154, 516, 78, 24)
+    this.frontGraphics.fillEllipse(1178, 598, 86, 28)
+    this.frontGraphics.fillEllipse(1188, 700, 72, 22)
+    for (let i = 0; i < 8; i += 1) {
+      const reedX = 1160 + (i % 3) * 18 + (i > 4 ? 114 : 0)
+      const reedY = 338 + i * 42
+      this.frontGraphics.fillStyle(parseColor('#72c66d'), 0.92)
+      this.frontGraphics.fillRect(reedX, reedY, 4, 24)
+      this.frontGraphics.fillEllipse(reedX + 2, reedY - 6, 12, 7)
+    }
+
+    if (progress > 0.45) {
+      this.frontGraphics.fillStyle(parseColor('#ffffff'), 0.24)
+      this.frontGraphics.fillCircle(1322, 538, 14)
+      this.frontGraphics.fillCircle(1278, 624, 10)
+      this.frontGraphics.fillCircle(1296, 714, 12)
+    }
+  }
+
+  private drawBridge(x: number, y: number, progress: number): void {
+    this.frontGraphics.fillStyle(parseColor('#a1744e'), 0.96)
+    this.frontGraphics.fillRoundedRect(x - 34, y, 68, 108, 18)
+    this.frontGraphics.fillStyle(parseColor('#d8b07b'), 0.88)
+    for (let i = 0; i < 5; i += 1) {
+      this.frontGraphics.fillRoundedRect(x - 24, y + 10 + i * 18, 48, 10, 5)
+    }
+    this.frontGraphics.fillStyle(parseColor('#6e523a'), 0.9)
+    this.frontGraphics.fillRoundedRect(x - 40, y - 12, 12, 132, 6)
+    this.frontGraphics.fillRoundedRect(x + 28, y - 12, 12, 132, 6)
+    if (progress > 0.4) {
+      this.frontGraphics.fillStyle(parseColor('#fff3c5'), 0.42)
+      this.frontGraphics.fillRoundedRect(x - 12, y + 20, 24, 68, 12)
+    }
+  }
+
   private drawTree(x: number, y: number, leafColor: number, alpha: number): void {
-    this.decorGraphics.fillStyle(parseColor('#815d3d'), 0.94)
-    this.decorGraphics.fillRoundedRect(x - 10, y + 24, 20, 46, 8)
-    this.decorGraphics.fillStyle(leafColor, alpha)
-    this.decorGraphics.fillCircle(x, y, 38)
-    this.decorGraphics.fillCircle(x - 24, y + 14, 28)
-    this.decorGraphics.fillCircle(x + 24, y + 14, 28)
-    this.decorGraphics.fillStyle(parseColor('#dff8a6'), 0.18)
-    this.decorGraphics.fillCircle(x - 10, y - 8, 12)
+    this.decorGraphics.fillStyle(parseColor('#6e4f34'), 0.26)
+    this.decorGraphics.fillEllipse(x, y + 68, 62, 16)
+    this.decorGraphics.fillStyle(parseColor('#815d3d'), 0.96)
+    this.decorGraphics.fillRoundedRect(x - 11, y + 18, 22, 56, 8)
+    this.decorGraphics.fillStyle(parseColor('#9a7250'), 0.4)
+    this.decorGraphics.fillRoundedRect(x - 3, y + 22, 6, 44, 3)
+    this.decorGraphics.fillStyle(mixColors(leafColor, parseColor('#c7ef9b'), 0.16), alpha)
+    this.decorGraphics.fillCircle(x, y, 42)
+    this.decorGraphics.fillCircle(x - 28, y + 16, 30)
+    this.decorGraphics.fillCircle(x + 28, y + 16, 30)
+    this.decorGraphics.fillCircle(x, y + 24, 34)
+    this.decorGraphics.fillStyle(parseColor('#dff8a6'), 0.2)
+    this.decorGraphics.fillCircle(x - 12, y - 10, 14)
+    this.decorGraphics.fillCircle(x + 16, y + 4, 10)
   }
 
   private drawFlowerPatch(x: number, y: number, progress: number, zoneProgress: number): void {
-    const flowerCount = 5 + Math.round(progress * 6 + zoneProgress * 5)
+    const flowerCount = 8 + Math.round(progress * 7 + zoneProgress * 6)
     for (let i = 0; i < flowerCount; i += 1) {
       const angle = (Math.PI * 2 * i) / flowerCount
-      const distance = 8 + (i % 3) * 8
+      const distance = 8 + (i % 4) * 8
       const px = x + Math.cos(angle) * distance
       const py = y + Math.sin(angle) * distance
       this.decorGraphics.fillStyle(parseColor('#5fbf58'), 0.9)
-      this.decorGraphics.fillRect(px - 1, py - 3, 2, 9)
+      this.decorGraphics.fillRect(px - 1, py - 2, 2, 11)
       this.decorGraphics.fillStyle(
         [parseColor('#ff9bb0'), parseColor('#fff08b'), parseColor('#84dfff'), parseColor('#ffffff')][i % 4],
         0.95,
       )
-      this.decorGraphics.fillCircle(px, py - 6, 4)
+      this.decorGraphics.fillCircle(px - 3, py - 7, 3)
+      this.decorGraphics.fillCircle(px + 3, py - 7, 3)
+      this.decorGraphics.fillCircle(px, py - 10, 3)
+      this.decorGraphics.fillCircle(px, py - 4, 3)
     }
   }
 
   private drawFence(x: number, y: number, width: number, height: number, progress: number): void {
-    this.frontGraphics.lineStyle(6, mixColors(parseColor('#8c6745'), parseColor('#a97a53'), progress * 0.55), 0.88)
+    this.frontGraphics.lineStyle(6, mixColors(parseColor('#8c6745'), parseColor('#a97a53'), progress * 0.55), 0.92)
     this.frontGraphics.strokeRoundedRect(x, y, width, height, 24)
     for (let px = x + 22; px < x + width; px += 40) {
       this.frontGraphics.lineBetween(px, y, px, y + height)
     }
+    this.frontGraphics.lineStyle(3, parseColor('#f7d2a5'), 0.36)
+    this.frontGraphics.strokeRoundedRect(x + 8, y + 8, width - 16, height - 16, 18)
   }
 
   private getZoneProgress(zone: TaskZone): number {
@@ -1450,6 +1820,12 @@ function prepareGuardiansTextures(scene: Phaser.Scene): void {
     })
   }
 
+  for (const frame of [0, 1] as const) {
+    createGraphicsTexture(scene, cloudTextureKey(frame), 220, 104, (graphics) => {
+      drawCloudTexture(graphics, frame)
+    })
+  }
+
   createGraphicsTexture(scene, sparkleTextureKey(), 28, 28, (graphics) => {
     graphics.fillStyle(parseColor('#ffffff'), 1)
     graphics.fillTriangle(14, 0, 18, 10, 14, 14)
@@ -1484,7 +1860,9 @@ function drawGuardianTexture(
   direction: Direction,
   pose: CharacterPose,
 ): void {
+  const outline = parseColor('#3b2a21')
   const fur = role === 'cat' ? parseColor('#f7a338') : parseColor('#9a6a48')
+  const furDark = role === 'cat' ? parseColor('#da7d1f') : parseColor('#704d35')
   const furAlt = role === 'cat' ? parseColor('#ffd596') : parseColor('#d1aa7a')
   const accent = role === 'cat' ? parseColor('#6bd66d') : parseColor('#58b7ff')
   const badge = role === 'cat' ? parseColor('#65d57a') : parseColor('#78d46f')
@@ -1493,64 +1871,112 @@ function drawGuardianTexture(
   const jump = pose === 'happy' ? -8 : 0
   const point = pose === 'point' ? 1 : 0
   const think = pose === 'thinking' ? 1 : 0
+  const faceShift = direction === 'left' ? -6 : direction === 'right' ? 6 : 0
 
+  graphics.fillStyle(parseColor('#09131d'), 0.1)
+  graphics.fillEllipse(48, 80 + jump, 46, 16)
   graphics.fillStyle(parseColor('#d6f0ff'), 0.12)
   graphics.fillCircle(48, 54 + jump, 26)
+
+  graphics.fillStyle(outline, 0.96)
+  graphics.fillEllipse(48, 56 + jump, 40, 32)
+  graphics.fillEllipse(48, 34 + jump, 38, 30)
+
   graphics.fillStyle(fur, 1)
   graphics.fillEllipse(48, 54 + jump, 34, 28)
+  graphics.fillStyle(furDark, 0.84)
+  graphics.fillEllipse(48, 59 + jump, 24, 10)
   graphics.fillStyle(furAlt, 0.96)
   graphics.fillEllipse(48, 48 + jump, 22, 18)
 
   if (direction === 'up') {
+    graphics.fillStyle(outline, 1)
+    graphics.fillTriangle(36, 32 + jump, 24, 14 + jump, 44, 22 + jump)
+    graphics.fillTriangle(60, 32 + jump, 52, 22 + jump, 72, 14 + jump)
     graphics.fillStyle(fur, 1)
-    graphics.fillTriangle(36, 32 + jump, 26, 18 + jump, 42, 22 + jump)
-    graphics.fillTriangle(60, 32 + jump, 54, 22 + jump, 70, 18 + jump)
+    graphics.fillTriangle(36, 32 + jump, 27, 18 + jump, 42, 22 + jump)
+    graphics.fillTriangle(60, 32 + jump, 54, 22 + jump, 69, 18 + jump)
   } else {
+    graphics.fillStyle(outline, 1)
+    graphics.fillTriangle(34, 28 + jump, 24, 10 + jump, 43, 20 + jump)
+    graphics.fillTriangle(62, 28 + jump, 53, 20 + jump, 72, 10 + jump)
     graphics.fillStyle(fur, 1)
-    graphics.fillTriangle(34, 28 + jump, 26, 14 + jump, 42, 20 + jump)
-    graphics.fillTriangle(62, 28 + jump, 54, 20 + jump, 70, 14 + jump)
+    graphics.fillTriangle(34, 28 + jump, 27, 14 + jump, 42, 20 + jump)
+    graphics.fillTriangle(62, 28 + jump, 54, 20 + jump, 69, 14 + jump)
   }
 
   graphics.fillStyle(fur, 1)
   graphics.fillEllipse(48, 34 + jump, direction === 'up' ? 30 : 34, 28)
   graphics.fillStyle(furAlt, 0.98)
-  graphics.fillEllipse(48, 38 + jump, 22, 16)
+  graphics.fillEllipse(48 + faceShift * 0.24, 39 + jump, 22, 16)
+  graphics.fillStyle(parseColor('#ffffff'), 0.24)
+  graphics.fillCircle(38, 28 + jump, 5)
 
   if (direction !== 'up') {
     graphics.fillStyle(eye, 0.94)
     if (direction === 'left') {
-      graphics.fillCircle(42, 32 + jump, 2)
-      graphics.fillCircle(34, 34 + jump, 2.2)
+      graphics.fillCircle(42, 32 + jump, 2.4)
+      graphics.fillCircle(34, 34 + jump, 2.6)
     } else if (direction === 'right') {
-      graphics.fillCircle(54, 32 + jump, 2)
-      graphics.fillCircle(62, 34 + jump, 2.2)
+      graphics.fillCircle(54, 32 + jump, 2.4)
+      graphics.fillCircle(62, 34 + jump, 2.6)
     } else {
-      graphics.fillCircle(42, 34 + jump, 2.2)
-      graphics.fillCircle(54, 34 + jump, 2.2)
+      graphics.fillCircle(42, 34 + jump, 2.4)
+      graphics.fillCircle(54, 34 + jump, 2.4)
     }
+    graphics.fillStyle(parseColor('#603f2e'), 0.92)
+    graphics.fillCircle(48 + faceShift * 0.48, 39 + jump, 2.6)
+    graphics.lineStyle(2, parseColor('#684a3a'), 0.8)
+    graphics.lineBetween(45 + faceShift * 0.32, 42 + jump, 51 + faceShift * 0.32, 42 + jump)
   }
 
-  graphics.lineStyle(4, fur, 0.96)
+  graphics.lineStyle(6, outline, 0.86)
   const tailShift = pose === 'happy' ? Math.sin(Math.PI * 0.25) * 4 : step * 2
   if (direction === 'left') {
-    graphics.lineBetween(66, 56 + jump, 78, 48 + jump + tailShift)
+    graphics.lineBetween(66, 56 + jump, 82, 46 + jump + tailShift)
   } else if (direction === 'right') {
-    graphics.lineBetween(30, 56 + jump, 18, 48 + jump - tailShift)
+    graphics.lineBetween(30, 56 + jump, 14, 46 + jump - tailShift)
   } else {
-    graphics.lineBetween(66, 58 + jump, 78, 48 + jump + tailShift)
+    graphics.lineBetween(66, 58 + jump, 82, 46 + jump + tailShift)
+  }
+  graphics.lineStyle(4, fur, 0.96)
+  if (direction === 'left') {
+    graphics.lineBetween(66, 56 + jump, 80, 48 + jump + tailShift)
+  } else if (direction === 'right') {
+    graphics.lineBetween(30, 56 + jump, 16, 48 + jump - tailShift)
+  } else {
+    graphics.lineBetween(66, 58 + jump, 80, 48 + jump + tailShift)
   }
 
   graphics.fillStyle(accent, 0.98)
   if (role === 'cat') {
     graphics.fillRoundedRect(34, 50 + jump, 28, 10, 5)
+    graphics.fillStyle(parseColor('#4e9c49'), 0.98)
+    graphics.fillRoundedRect(58, 50 + jump, 10, 10, 5)
+    graphics.fillStyle(parseColor('#7fdf84'), 0.36)
+    graphics.fillRoundedRect(36, 52 + jump, 20, 3, 2)
   } else {
     graphics.fillRoundedRect(34, 48 + jump, 28, 8, 4)
     graphics.fillStyle(badge, 0.98)
     graphics.fillCircle(48, 60 + jump, 4)
+    graphics.fillStyle(parseColor('#ffffff'), 0.9)
+    graphics.fillEllipse(48, 54 + jump, 12, 5)
   }
 
-  graphics.fillStyle(fur, 1)
+  if (role === 'cat') {
+    graphics.fillStyle(parseColor('#58a65a'), 0.92)
+    graphics.fillRoundedRect(57, 44 + jump, 13, 20, 5)
+    graphics.fillStyle(parseColor('#85e78f'), 0.34)
+    graphics.fillRoundedRect(59, 46 + jump, 8, 5, 2)
+  }
+
+  graphics.fillStyle(outline, 0.96)
   const pawY = 70 + jump
+  graphics.fillEllipse(38 - step * 2, pawY, 12, 10)
+  graphics.fillEllipse(58 + step * 2, pawY, 12, 10)
+  graphics.fillEllipse(40 + step * 2, pawY + 10, 12, 10)
+  graphics.fillEllipse(56 - step * 2, pawY + 10, 12, 10)
+  graphics.fillStyle(fur, 1)
   graphics.fillEllipse(38 - step * 2, pawY, 10, 8)
   graphics.fillEllipse(58 + step * 2, pawY, 10, 8)
   graphics.fillEllipse(40 + step * 2, pawY + 10, 10, 8)
@@ -1577,8 +2003,14 @@ function drawGuardianTexture(
 }
 
 function drawAnimalTexture(graphics: Phaser.GameObjects.Graphics, kind: AnimalKind, frame: 0 | 1): void {
+  graphics.fillStyle(parseColor('#09131d'), 0.08)
+  graphics.fillEllipse(36, 54, 30, 10)
+
   switch (kind) {
     case 'cow':
+      graphics.fillStyle(parseColor('#6f4e37'), 0.96)
+      graphics.fillEllipse(36, 42, 40, 30)
+      graphics.fillEllipse(48, 30, 28, 22)
       graphics.fillStyle(parseColor('#fff7ec'), 1)
       graphics.fillEllipse(36, 42, 36, 28)
       graphics.fillEllipse(48, 30, 24, 20)
@@ -1587,8 +2019,12 @@ function drawAnimalTexture(graphics: Phaser.GameObjects.Graphics, kind: AnimalKi
       graphics.fillEllipse(46, 46, 12, 10)
       graphics.fillCircle(46, 30, 2)
       graphics.fillCircle(54, 30, 2)
+      graphics.fillStyle(parseColor('#ffcfb7'), 0.9)
+      graphics.fillEllipse(50, 38, 12, 8)
       break
     case 'bunny':
+      graphics.fillStyle(parseColor('#f0d8d8'), 0.92)
+      graphics.fillEllipse(36, 42, 30, 26)
       graphics.fillStyle(parseColor('#fff1ef'), 1)
       graphics.fillEllipse(36, 42, 26, 22)
       graphics.fillEllipse(40, 26, 22, 18)
@@ -1597,15 +2033,21 @@ function drawAnimalTexture(graphics: Phaser.GameObjects.Graphics, kind: AnimalKi
       graphics.fillStyle(parseColor('#ff9bb0'), 0.8)
       graphics.fillRoundedRect(32, 8 + frame * 2, 2, 16, 1)
       graphics.fillRoundedRect(44, 6 + frame * 2, 2, 16, 1)
+      graphics.fillCircle(44, 28, 2)
       break
     case 'bird':
+      graphics.fillStyle(parseColor('#5a87c4'), 0.96)
+      graphics.fillCircle(36, 36, 19)
       graphics.fillStyle(parseColor('#8fd2ff'), 1)
       graphics.fillCircle(36, 36, 16)
       graphics.fillTriangle(46, 40, 62, 36, 46, 32)
       graphics.fillStyle(parseColor('#ffffff'), 0.9)
       graphics.fillCircle(32, 34, 6)
+      graphics.fillCircle(32, 34, 2)
       break
     case 'bee':
+      graphics.fillStyle(parseColor('#564233'), 0.82)
+      graphics.fillEllipse(36, 36, 28, 20)
       graphics.fillStyle(parseColor('#ffd66d'), 1)
       graphics.fillEllipse(36, 36, 24, 18)
       graphics.fillStyle(parseColor('#3e2f24'), 0.96)
@@ -1616,6 +2058,8 @@ function drawAnimalTexture(graphics: Phaser.GameObjects.Graphics, kind: AnimalKi
       graphics.fillEllipse(46, 28 + frame * 4, 12, 10)
       break
     case 'fish':
+      graphics.fillStyle(parseColor('#3c9fbe'), 0.96)
+      graphics.fillEllipse(34, 36, 28, 18)
       graphics.fillStyle(parseColor('#6bd7ff'), 1)
       graphics.fillEllipse(34, 36, 24, 16)
       graphics.fillTriangle(18, 36, 4, 26, 4, 46)
@@ -1623,6 +2067,8 @@ function drawAnimalTexture(graphics: Phaser.GameObjects.Graphics, kind: AnimalKi
       graphics.fillCircle(40, 34, 3)
       break
     case 'hen':
+      graphics.fillStyle(parseColor('#d9c79b'), 0.94)
+      graphics.fillEllipse(36, 40, 30, 24)
       graphics.fillStyle(parseColor('#fff6d7'), 1)
       graphics.fillEllipse(36, 40, 26, 22)
       graphics.fillCircle(44, 28, 10)
@@ -1644,6 +2090,19 @@ function drawButterflyTexture(graphics: Phaser.GameObjects.Graphics, frame: 0 | 
   graphics.fillRoundedRect(30, 20, 4, 26, 2)
 }
 
+function drawCloudTexture(graphics: Phaser.GameObjects.Graphics, frame: 0 | 1): void {
+  graphics.fillStyle(parseColor('#87b9df'), 0.16)
+  graphics.fillEllipse(112, 70, 144, 24)
+  graphics.fillStyle(parseColor('#ffffff'), 0.92)
+  graphics.fillEllipse(72, 52, 74, 38)
+  graphics.fillEllipse(110, 42 + frame * 2, 82, 46)
+  graphics.fillEllipse(150, 54, 90, 40)
+  graphics.fillEllipse(188, 56 - frame * 2, 54, 30)
+  graphics.fillStyle(parseColor('#dff3ff'), 0.74)
+  graphics.fillEllipse(110, 36, 44, 18)
+  graphics.fillEllipse(156, 46, 36, 14)
+}
+
 function drawEcoTexture(
   graphics: Phaser.GameObjects.Graphics,
   taskId: TaskId,
@@ -1652,13 +2111,19 @@ function drawEcoTexture(
   const active = state !== 'base'
   const blink = state === 'active-b'
 
-  graphics.fillStyle(parseColor(active ? '#fff6cf' : '#fff1dc'), active ? 0.22 : 0.12)
+  graphics.fillStyle(parseColor('#153348'), 0.08)
+  graphics.fillCircle(56, 62, 38)
+  graphics.fillStyle(parseColor(active ? '#fff6cf' : '#fff1dc'), active ? 0.3 : 0.18)
   graphics.fillCircle(56, 56, active ? 38 : 34)
+  graphics.lineStyle(4, parseColor(active ? '#ffffff' : '#d7e6ef'), active ? 0.46 : 0.3)
+  graphics.strokeCircle(56, 56, active ? 38 : 34)
 
   switch (taskId) {
     case 'solar-panels':
       graphics.fillStyle(parseColor('#417db6'), 1)
       graphics.fillRoundedRect(22, 42, 68, 40, 10)
+      graphics.fillStyle(parseColor('#335f8d'), 1)
+      graphics.fillRoundedRect(22, 42, 68, 8, 6)
       graphics.fillStyle(parseColor('#8fd2ff'), blink ? 0.9 : 0.72)
       graphics.fillRect(28, 48, 56, 8)
       graphics.fillRect(28, 62, 56, 8)
@@ -1763,6 +2228,10 @@ function ecoTextureKey(taskId: TaskId, state: 'base' | 'active-a' | 'active-b'):
 
 function butterflyTextureKey(frame: 0 | 1): string {
   return `guardians-butterfly-${frame}`
+}
+
+function cloudTextureKey(frame: 0 | 1): string {
+  return `guardians-cloud-${frame}`
 }
 
 function sparkleTextureKey(): string {
