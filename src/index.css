@@ -391,10 +391,14 @@ button {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #071013;
+  background:
+    radial-gradient(circle at 52% 18%, rgba(130, 216, 208, 0.16), transparent 24%),
+    linear-gradient(180deg, #061116 0%, #020608 100%);
 }
 
 .demo-fullscreen-shell .game-shell {
+  display: grid;
+  place-items: center;
   width: 100vw;
   height: 100vh;
   min-height: 0;
@@ -402,6 +406,8 @@ button {
 
 .demo-fullscreen-shell canvas {
   margin: auto;
+  border-radius: 14px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
 }
 
 .demo-hud-overlay {
@@ -412,36 +418,17 @@ button {
   z-index: 10;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 14px;
   pointer-events: none;
-}
-
-.demo-hud-overlay > div {
-  display: grid;
-  gap: 4px;
-  max-width: min(620px, calc(100vw - 180px));
-  padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(8, 13, 16, 0.72);
-  backdrop-filter: blur(10px);
-}
-
-.demo-hud-overlay strong {
-  color: var(--accent);
-}
-
-.demo-hud-overlay span {
-  color: var(--text);
-  font-size: 0.92rem;
 }
 
 .demo-hud-overlay button {
   pointer-events: auto;
   white-space: nowrap;
-  background: rgba(8, 13, 16, 0.72);
-  backdrop-filter: blur(10px);
+  background: rgba(4, 9, 12, 0.6);
+  border-color: rgba(243, 191, 99, 0.22);
+  backdrop-filter: blur(12px);
 }
 
 .demo-loading-state {

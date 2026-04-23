@@ -45,6 +45,7 @@ type MatterShape = ShapeObject & {
   body: MatterJS.BodyType
   art?: Phaser.GameObjects.Image
   shadow?: Phaser.GameObjects.Ellipse
+  glow?: Phaser.GameObjects.Shape
 }
 
 const ASTRAL_TEXTURES = {
@@ -102,6 +103,10 @@ type SlingshotMaterial = 'wood' | 'glass' | 'brass'
 type SlingshotBlock = {
   shape: MatterShape
   material: SlingshotMaterial
+  integrity: number
+  maxIntegrity: number
+  fractureLevel: number
+  lastImpactAt: number
   collapseLeft: number
   collapseRight: number
   collapseBottom: number
@@ -110,6 +115,8 @@ type SlingshotBlock = {
 type SlingshotTarget = {
   shape: MatterShape
   integrity: number
+  maxIntegrity: number
+  lastImpactAt: number
 }
 
 type SlingshotBlockDefinition = {
@@ -154,6 +161,17 @@ type SlingshotState = {
   heroPose: AstralHeroPose
   heroBase: { x: number; y: number }
   elasticSnap: { startedAt: number; pullX: number; pullY: number } | null
+  lastTrailAt: number
+  lastStepAt: number
+}
+
+const SLINGSHOT_MATERIAL_STATS: Record<
+  SlingshotMaterial,
+  { density: number; integrity: number; damageScale: number; particleColor: string }
+> = {
+  wood: { density: 0.0016, integrity: 7.2, damageScale: 0.72, particleColor: '#f3bf63' },
+  glass: { density: 0.0011, integrity: 4.8, damageScale: 1.35, particleColor: '#82d8d0' },
+  brass: { density: 0.0028, integrity: 11.8, damageScale: 0.42, particleColor: '#f0a949' },
 }
 
 const SLINGSHOT_LEVELS: SlingshotLevel[] = [
@@ -300,6 +318,7 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.resetSessionState()
     this.timeLeft = defaultTimerForProfile(this.runtimeProfile)
 
     this.prepareAstralCutoutTextures()
@@ -355,10 +374,15 @@ class GeneratedGameScene extends Phaser.Scene {
       this.input.off('pointerdown', this.handlePointerDown, this)
       this.input.off('pointermove', this.handlePointerMove, this)
       this.input.off('pointerup', this.handlePointerUp, this)
+      if (this.runtimeProfile === 'slingshot-destruction') {
+        this.matter.world.off('collisionstart', this.handleSlingshotCollision, this)
+      }
     })
   }
 
   update(_time: number, deltaMs: number): void {
+    this.handleGlobalShortcuts()
+
     if (this.gameEnded) {
       return
     }
@@ -409,11 +433,61 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.keys = keyboard.addKeys(
-      'W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,SHIFT',
+      'W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,SHIFT,R,F',
     ) as Record<string, Phaser.Input.Keyboard.Key>
   }
 
+  private resetSessionState(): void {
+    this.player = undefined
+    this.playerVelocity.set(0, 0)
+    this.playerHistory.length = 0
+    this.enemies.length = 0
+    this.projectiles.length = 0
+    this.shards.length = 0
+    this.laneObjects.length = 0
+    this.platforms.length = 0
+    this.slingshot = undefined
+    this.health = 100
+    this.score = 0
+    this.combo = 1
+    this.comboTimer = 0
+    this.burstCooldown = 0
+    this.spawnAccumulator = 0
+    this.shotAccumulator = 0
+    this.laneSwitchCooldown = 0
+    this.laneIndex = 1
+    this.relicsRemaining = 0
+    this.onGround = false
+    this.facing = 1
+    this.gameEnded = false
+  }
+
+  private handleGlobalShortcuts(): void {
+    if (!this.keys) {
+      return
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.F)) {
+      const fullscreenTarget = document.documentElement
+      if (!document.fullscreenElement) {
+        void fullscreenTarget.requestFullscreen?.()
+      } else {
+        void document.exitFullscreen?.()
+      }
+    }
+
+    if (this.gameEnded && Phaser.Input.Keyboard.JustDown(this.keys.R)) {
+      this.scene.restart()
+    }
+  }
+
   private createHud(): void {
+    this.add
+      .rectangle(20, 18, this.runtimeProfile === 'slingshot-destruction' ? 398 : 470, 100, 0x081014, 0.5)
+      .setOrigin(0, 0)
+      .setDepth(28)
+      .setStrokeStyle(1, parseColor(this.blueprint.palette.accentAlt), 0.12)
+
     this.add
       .text(28, 24, this.blueprint.title.toUpperCase(), {
         fontFamily: 'IBM Plex Mono, monospace',
@@ -421,55 +495,47 @@ class GeneratedGameScene extends Phaser.Scene {
         color: this.blueprint.palette.accent,
       })
       .setAlpha(0.95)
+      .setDepth(30)
 
     this.statusText = this.add.text(28, 50, '', {
       fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: '15px',
+      fontSize: this.runtimeProfile === 'slingshot-destruction' ? '13px' : '15px',
       color: this.blueprint.palette.text,
     })
+    this.statusText.setDepth(30)
 
     this.objectiveText = this.add.text(28, 84, '', {
       fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: '12px',
+      fontSize: this.runtimeProfile === 'slingshot-destruction' ? '10px' : '12px',
       color: '#d7d0c5',
-      wordWrap: { width: 440 },
+      wordWrap: { width: this.runtimeProfile === 'slingshot-destruction' ? 346 : 440 },
     })
+    this.objectiveText.setDepth(30)
 
     this.supportText = this.add.text(28, GAME_HEIGHT - 26, '', {
       fontFamily: 'IBM Plex Mono, monospace',
       fontSize: '11px',
       color: this.blueprint.palette.accentAlt,
     })
+    this.supportText.setDepth(30)
     this.supportText.setText(
-      `${RUNTIME_LABELS[this.runtimeProfile]} / ${this.blueprint.supportLevel.toUpperCase()} / ${this.blueprint.noveltyHook}`,
+      this.runtimeProfile === 'slingshot-destruction'
+        ? 'R reinicia la run · F alterna pantalla completa'
+        : `${RUNTIME_LABELS[this.runtimeProfile]} / ${this.blueprint.supportLevel.toUpperCase()} / ${this.blueprint.noveltyHook}`,
     )
   }
 
   private drawBackdrop(palette: GamePalette): void {
-    if (this.runtimeProfile === 'slingshot-destruction' && this.textures.exists(ASTRAL_TEXTURES.background)) {
-      const image = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASTRAL_TEXTURES.background)
-      const scale = Math.max(GAME_WIDTH / image.width, GAME_HEIGHT / image.height)
-      image.setScale(scale)
-      image.setAlpha(0.5)
+    if (this.runtimeProfile === 'slingshot-destruction') {
+      this.drawAstralBackdrop(palette)
+      return
     }
 
     const graphics = this.add.graphics()
-    graphics.fillStyle(parseColor(palette.bg), this.runtimeProfile === 'slingshot-destruction' ? 0.62 : 1)
+    graphics.fillStyle(parseColor(palette.bg), 1)
     graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
 
-    if (this.runtimeProfile === 'slingshot-destruction') {
-      graphics.fillStyle(parseColor(palette.accent), 0.08)
-      graphics.fillCircle(160, 120, 76)
-      graphics.fillStyle(parseColor(palette.accentAlt), 0.12)
-      graphics.fillCircle(172, 112, 54)
-
-      for (let i = 0; i < 6; i += 1) {
-        graphics.fillStyle(parseColor(palette.accentAlt), 0.06 + i * 0.01)
-        graphics.fillEllipse(120 + i * 140, GAME_HEIGHT - 80 - (i % 2) * 18, 180, 52)
-      }
-    }
-
-    graphics.fillStyle(parseColor(palette.surface), this.runtimeProfile === 'slingshot-destruction' ? 0.28 : 0.45)
+    graphics.fillStyle(parseColor(palette.surface), 0.45)
     for (let i = 0; i < 9; i += 1) {
       graphics.fillRoundedRect(70 + i * 90, 40 + (i % 2) * 36, 120, 340, 18)
     }
@@ -488,6 +554,43 @@ class GeneratedGameScene extends Phaser.Scene {
       graphics.lineStyle(3, parseColor(palette.accent), 0.25)
       graphics.lineBetween(0, GAME_HEIGHT - 72, GAME_WIDTH, GAME_HEIGHT - 72)
     }
+  }
+
+  private drawAstralBackdrop(palette: GamePalette): void {
+    if (this.textures.exists(ASTRAL_TEXTURES.background)) {
+      const image = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASTRAL_TEXTURES.background).setDepth(-60)
+      const scale = Math.max(GAME_WIDTH / image.width, GAME_HEIGHT / image.height)
+      image.setScale(scale)
+    }
+
+    const atmosphere = this.add.graphics().setDepth(-50)
+    atmosphere.fillStyle(parseColor('#031016'), 0.16)
+    atmosphere.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
+    atmosphere.fillStyle(parseColor(palette.bg), 0.18)
+    atmosphere.fillRect(0, 0, GAME_WIDTH, 120)
+    atmosphere.fillStyle(parseColor('#020507'), 0.32)
+    atmosphere.fillRect(0, GAME_HEIGHT - 74, GAME_WIDTH, 74)
+
+    atmosphere.fillStyle(parseColor(palette.accentAlt), 0.1)
+    atmosphere.fillCircle(516, 128, 96)
+    atmosphere.fillStyle(parseColor(palette.accent), 0.11)
+    atmosphere.fillCircle(82, 430, 54)
+    atmosphere.fillCircle(868, 428, 72)
+
+    for (let i = 0; i < 26; i += 1) {
+      const x = 70 + ((i * 157) % 840)
+      const y = 36 + ((i * 71) % 210)
+      const radius = 0.8 + (i % 3) * 0.45
+      atmosphere.fillStyle(parseColor(i % 4 === 0 ? palette.accent : '#f7f1e8'), 0.34 + (i % 5) * 0.05)
+      atmosphere.fillCircle(x, y, radius)
+    }
+
+    const foreground = this.add.graphics().setDepth(2)
+    foreground.fillStyle(parseColor('#061017'), 0.5)
+    foreground.fillEllipse(150, GAME_HEIGHT - 28, 460, 84)
+    foreground.fillEllipse(774, GAME_HEIGHT - 22, 530, 88)
+    foreground.lineStyle(2, parseColor(palette.accent), 0.24)
+    foreground.lineBetween(0, GAME_HEIGHT - 73, GAME_WIDTH, GAME_HEIGHT - 73)
   }
 
   private createPlayer(): void {
@@ -730,33 +833,40 @@ class GeneratedGameScene extends Phaser.Scene {
       heroBase: { x: 156, y: GAME_HEIGHT - 70 },
       heroPose: 'idle',
       elasticSnap: null,
+      lastTrailAt: 0,
+      lastStepAt: 0,
       levelBadge: this.add
         .text(GAME_WIDTH - 28, 24, '', {
           fontFamily: 'IBM Plex Mono, monospace',
           fontSize: '12px',
           color: this.blueprint.palette.accentAlt,
         })
-        .setOrigin(1, 0),
+        .setOrigin(1, 0)
+        .setDepth(30),
       controlHint: this.add
         .text(
           28,
           GAME_HEIGHT - 56,
-          'CONTROLES: arrastra la semilla hacia atrás y suelta. Teclado: WASD/flechas para tensar, ESPACIO para disparar.',
+          'Arrastra hacia atrás, apunta con la trayectoria y suelta. WASD/flechas ajustan tensión, ESPACIO dispara.',
           {
             fontFamily: 'IBM Plex Mono, monospace',
             fontSize: '11px',
             color: this.blueprint.palette.accentAlt,
+            wordWrap: { width: 620 },
           },
         )
-        .setDepth(20),
+        .setDepth(30),
     }
 
     this.matter.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT)
     const ground = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 36, GAME_WIDTH, 72, parseColor(this.blueprint.palette.surface))
-    this.matter.add.gameObject(ground, { isStatic: true })
+    ground.setAlpha(0.01)
+    const groundBody = this.matter.add.gameObject(ground, { isStatic: true }) as MatterShape
+    groundBody.body.label = 'gameclaw-ground'
     const launcher = this.add.rectangle(120, GAME_HEIGHT - 105, 18, 72, parseColor(this.blueprint.palette.accent))
     launcher.setAlpha(0.01)
-    this.matter.add.gameObject(launcher, { isStatic: true })
+    const launcherBody = this.matter.add.gameObject(launcher, { isStatic: true }) as MatterShape
+    launcherBody.body.label = 'gameclaw-launcher'
 
     this.drawSlingshotFrame()
     this.slingshot.heroSprite = this.createSlingshotHeroSprite(this.slingshot.heroBase.x, this.slingshot.heroBase.y)
@@ -767,6 +877,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.input.on('pointerdown', this.handlePointerDown, this)
     this.input.on('pointermove', this.handlePointerMove, this)
     this.input.on('pointerup', this.handlePointerUp, this)
+    this.matter.world.on('collisionstart', this.handleSlingshotCollision, this)
   }
 
   private updateSlingshotDestruction(): void {
@@ -1159,6 +1270,39 @@ class GeneratedGameScene extends Phaser.Scene {
     })
   }
 
+  private emitImpactBurst(
+    x: number,
+    y: number,
+    color: string,
+    count: number,
+    spread: number,
+    alpha = 0.72,
+  ): void {
+    const parsedColor = parseColor(color)
+
+    for (let i = 0; i < count; i += 1) {
+      const angle = Phaser.Math.FloatBetween(-Math.PI, Math.PI)
+      const distance = Phaser.Math.FloatBetween(spread * 0.18, spread)
+      const radius = Phaser.Math.FloatBetween(1.6, 4.4)
+      const particle = this.add
+        .circle(x, y, radius, parsedColor, alpha)
+        .setDepth(18)
+        .setBlendMode(Phaser.BlendModes.ADD)
+
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance + Phaser.Math.FloatBetween(-8, 12),
+        alpha: 0,
+        scaleX: 0.18,
+        scaleY: 0.18,
+        duration: Phaser.Math.Between(260, 560),
+        ease: 'Cubic.easeOut',
+        onComplete: () => particle.destroy(),
+      })
+    }
+  }
+
   private spawnLaneWave(): void {
     const lanes = [GAME_WIDTH * 0.32, GAME_WIDTH * 0.5, GAME_WIDTH * 0.68]
     const hazardLane = Phaser.Math.Between(0, 2)
@@ -1201,13 +1345,14 @@ class GeneratedGameScene extends Phaser.Scene {
     this.slingshot.levelBadge.setText(`LEVEL ${levelIndex + 1} / ${this.slingshot.levels.length}  ${level.name.toUpperCase()}`)
     this.objectiveText.setText([
       `${this.blueprint.hero.name}: ${level.note}`,
-      `Break the structure, free every orbit core, and preserve shots for the next chamber.`,
+      'Free every orbit core. Save seeds for the next chamber.',
     ])
 
     this.clearSlingshotActors()
     this.slingshot.shotsRemaining += level.shots
 
     for (const blockDef of level.blocks) {
+      const materialStats = SLINGSHOT_MATERIAL_STATS[blockDef.material]
       const block = this.add.rectangle(
         blockDef.x,
         blockDef.y,
@@ -1221,11 +1366,20 @@ class GeneratedGameScene extends Phaser.Scene {
         friction: this.blueprint.physics.friction,
         restitution: blockDef.material === 'glass' ? this.blueprint.physics.bounce * 0.22 : this.blueprint.physics.bounce * 0.38,
       }) as MatterShape
+      gameObject.body.label = `gameclaw-block-${blockDef.material}`
+      this.matter.body.setDensity(gameObject.body, materialStats.density)
       gameObject.art = this.createSlingshotBlockArt(blockDef.material, blockDef.x, blockDef.y, blockDef.width, blockDef.height)
+      gameObject.shadow = this.createSlingshotShadow(blockDef.x, blockDef.y, blockDef.width, blockDef.height)
+
+      const sizeBonus = Math.sqrt(blockDef.width * blockDef.height) * 0.034
 
       this.slingshot.blocks.push({
         shape: gameObject,
         material: blockDef.material,
+        integrity: materialStats.integrity + sizeBonus,
+        maxIntegrity: materialStats.integrity + sizeBonus,
+        fractureLevel: 0,
+        lastImpactAt: 0,
         collapseLeft: blockDef.material === 'glass' ? 420 : 360,
         collapseRight: GAME_WIDTH + 120,
         collapseBottom: GAME_HEIGHT + 60,
@@ -1245,11 +1399,18 @@ class GeneratedGameScene extends Phaser.Scene {
         friction: this.blueprint.physics.friction,
         restitution: this.blueprint.physics.bounce * 0.15,
       }) as MatterShape
+      gameObject.body.label = 'gameclaw-target'
+      this.matter.body.setDensity(gameObject.body, 0.0019)
       gameObject.art = this.createSlingshotTargetArt(targetDef.x, targetDef.y, (targetDef.radius ?? 16) * 2.8)
+      gameObject.shadow = this.createSlingshotShadow(targetDef.x, targetDef.y, 54, 28)
+      gameObject.glow = this.createSlingshotGlow(targetDef.x, targetDef.y, (targetDef.radius ?? 16) * 4.2, this.blueprint.palette.accentAlt)
+      const integrity = targetDef.integrity ?? this.blueprint.physics.structuralIntegrity * 0.6
 
       this.slingshot.targets.push({
         shape: gameObject,
-        integrity: targetDef.integrity ?? this.blueprint.physics.structuralIntegrity * 0.6,
+        integrity,
+        maxIntegrity: integrity,
+        lastImpactAt: 0,
       })
     }
 
@@ -1290,11 +1451,13 @@ class GeneratedGameScene extends Phaser.Scene {
     for (const block of this.slingshot.blocks) {
       block.shape.art?.destroy()
       block.shape.shadow?.destroy()
+      block.shape.glow?.destroy()
       block.shape.destroy()
     }
     for (const target of this.slingshot.targets) {
       target.shape.art?.destroy()
       target.shape.shadow?.destroy()
+      target.shape.glow?.destroy()
       target.shape.destroy()
     }
 
@@ -1310,6 +1473,7 @@ class GeneratedGameScene extends Phaser.Scene {
 
     this.slingshot.projectile.art?.destroy()
     this.slingshot.projectile.shadow?.destroy()
+    this.slingshot.projectile.glow?.destroy()
     this.slingshot.projectile.destroy()
     this.slingshot.projectile = null
     this.slingshot.projectileLaunched = false
@@ -1336,8 +1500,12 @@ class GeneratedGameScene extends Phaser.Scene {
       frictionAir: this.blueprint.physics.drag,
     }) as MatterShape
 
+    matterProjectile.body.label = 'gameclaw-projectile'
+    this.matter.body.setDensity(matterProjectile.body, 0.0022)
     this.matter.body.setStatic(matterProjectile.body, true)
     matterProjectile.art = this.createSlingshotProjectileArt(this.slingshot.anchor.x, this.slingshot.anchor.y)
+    matterProjectile.shadow = this.createSlingshotShadow(this.slingshot.anchor.x, this.slingshot.anchor.y, 42, 20)
+    matterProjectile.glow = this.createSlingshotGlow(this.slingshot.anchor.x, this.slingshot.anchor.y, 62, this.blueprint.palette.accent)
     this.slingshot.projectile = matterProjectile
     this.slingshot.projectileLaunched = false
     this.slingshot.elasticSnap = null
@@ -1428,8 +1596,9 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    const maxDistance = 110
-    const offsetX = x - this.slingshot.anchor.x
+    const maxDistance = 128
+    const constrainedX = Math.min(x, this.slingshot.anchor.x - 2)
+    const offsetX = constrainedX - this.slingshot.anchor.x
     const offsetY = y - this.slingshot.anchor.y
     const vector = new Phaser.Math.Vector2(offsetX, offsetY)
 
@@ -1469,6 +1638,9 @@ class GeneratedGameScene extends Phaser.Scene {
 
     this.matter.body.setStatic(projectile.body, false)
     this.matter.body.setVelocity(projectile.body, { x: velocity.x, y: velocity.y })
+    this.matter.body.setAngularVelocity(projectile.body, Phaser.Math.Clamp(velocity.x * 0.003, -0.18, 0.18))
+    this.emitImpactBurst(projectile.x, projectile.y, this.blueprint.palette.accent, 12, 42)
+    this.cameras.main.shake(70, 0.0025)
   }
 
   private getPointerGamePosition(pointer: Phaser.Input.Pointer): Phaser.Math.Vector2 {
@@ -1561,7 +1733,7 @@ class GeneratedGameScene extends Phaser.Scene {
 
     this.slingshot.dragGuide.clear()
     this.slingshot.dragGuide.setDepth(12)
-    this.slingshot.dragGuide.lineStyle(2, parseColor(this.blueprint.palette.accentAlt), 0.2)
+    this.slingshot.dragGuide.lineStyle(2, parseColor(this.blueprint.palette.accentAlt), this.slingshot.dragging ? 0.34 : 0.16)
     this.slingshot.dragGuide.strokeCircle(this.slingshot.anchor.x, this.slingshot.anchor.y, 64)
 
     const projectile = this.slingshot.projectile
@@ -1579,6 +1751,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     const tension = Phaser.Math.Clamp(pull.length() / 110, 0, 1)
+    this.drawSlingshotPowerMeter(tension)
     this.drawElasticBand(forkTop, projectile, 5, this.blueprint.palette.accent, 0.6, tension, 0)
     this.drawElasticBand(forkBottom, projectile, 4, this.blueprint.palette.accentAlt, 0.62, tension, Math.PI * 0.8)
 
@@ -1591,6 +1764,23 @@ class GeneratedGameScene extends Phaser.Scene {
     if (pull.length() > 14) {
       this.drawPredictedSlingshotTrajectory(projectile)
     }
+  }
+
+  private drawSlingshotPowerMeter(tension: number): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    const x = this.slingshot.anchor.x - 70
+    const y = this.slingshot.anchor.y - 58
+    const height = 98
+    const fillHeight = height * tension
+    this.slingshot.dragGuide.fillStyle(parseColor('#020507'), 0.46)
+    this.slingshot.dragGuide.fillRoundedRect(x, y, 12, height, 6)
+    this.slingshot.dragGuide.fillStyle(parseColor(this.blueprint.palette.accent), 0.28 + tension * 0.56)
+    this.slingshot.dragGuide.fillRoundedRect(x + 2, y + height - fillHeight + 2, 8, Math.max(4, fillHeight - 4), 4)
+    this.slingshot.dragGuide.lineStyle(1, parseColor(this.blueprint.palette.text), 0.22)
+    this.slingshot.dragGuide.strokeRoundedRect(x, y, 12, height, 6)
   }
 
   private drawElasticRecoil(
@@ -1671,17 +1861,21 @@ class GeneratedGameScene extends Phaser.Scene {
     const gravityPerStep = this.blueprint.physics.gravity
     const drag = Phaser.Math.Clamp(this.blueprint.physics.drag, 0, 0.08)
 
-    for (let i = 1; i <= 24; i += 1) {
-      x += vx
-      y += vy
-      vx *= 1 - drag
-      vy = vy * (1 - drag) + gravityPerStep
+    for (let i = 1; i <= 28; i += 1) {
+      for (let substep = 0; substep < 2; substep += 1) {
+        x += vx
+        y += vy
+        vx *= 1 - drag
+        vy = vy * (1 - drag) + gravityPerStep
+      }
 
       if (x < 0 || x > GAME_WIDTH || y < 0 || y > GAME_HEIGHT - 68) {
         break
       }
 
-      this.slingshot.dragGuide.fillStyle(parseColor(this.blueprint.palette.accent), 0.38 - i * 0.011)
+      this.slingshot.dragGuide.fillStyle(parseColor('#020507'), 0.2 - i * 0.004)
+      this.slingshot.dragGuide.fillCircle(x + 2, y + 2, Math.max(2, 6 - i * 0.13))
+      this.slingshot.dragGuide.fillStyle(parseColor(this.blueprint.palette.accent), 0.46 - i * 0.012)
       this.slingshot.dragGuide.fillCircle(x, y, Math.max(2, 6 - i * 0.13))
     }
   }
@@ -1724,6 +1918,168 @@ class GeneratedGameScene extends Phaser.Scene {
     this.applyHeroSpritePose(hero, pose)
     hero.setPosition(this.slingshot.heroBase.x + pullOffsetX, this.slingshot.heroBase.y + pullOffsetY + walkBob)
     hero.setRotation(Phaser.Math.Clamp(pullOffsetX * 0.004, -0.13, 0.07))
+
+    if (walking && this.time.now - this.slingshot.lastStepAt > 180) {
+      this.slingshot.lastStepAt = this.time.now
+      this.emitImpactBurst(hero.x - 6, this.slingshot.heroBase.y - 6, '#d8a65d', 3, 12, 0.28)
+    }
+  }
+
+  private handleSlingshotCollision(event: Phaser.Physics.Matter.Events.CollisionStartEvent): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    for (const pair of event.pairs) {
+      const bodyA = pair.bodyA
+      const bodyB = pair.bodyB
+      const projectileHit = Boolean(
+        this.slingshot.projectile &&
+          (bodyBelongsToMatterShape(bodyA, this.slingshot.projectile) ||
+            bodyBelongsToMatterShape(bodyB, this.slingshot.projectile)),
+      )
+      const targetA = this.findSlingshotTargetByBody(bodyA)
+      const targetB = this.findSlingshotTargetByBody(bodyB)
+      const blockA = this.findSlingshotBlockByBody(bodyA)
+      const blockB = this.findSlingshotBlockByBody(bodyB)
+      const targetHit = targetA ?? targetB
+      const impactSpeed = Math.hypot(
+        bodyA.velocity.x - bodyB.velocity.x,
+        bodyA.velocity.y - bodyB.velocity.y,
+      )
+
+      if (impactSpeed < 1.35) {
+        continue
+      }
+
+      const impactX = (bodyA.position.x + bodyB.position.x) * 0.5
+      const impactY = (bodyA.position.y + bodyB.position.y) * 0.5
+      const burstColor = targetHit
+        ? this.blueprint.palette.accentAlt
+        : blockA
+          ? SLINGSHOT_MATERIAL_STATS[blockA.material].particleColor
+          : blockB
+            ? SLINGSHOT_MATERIAL_STATS[blockB.material].particleColor
+            : this.blueprint.palette.accent
+      this.emitImpactBurst(impactX, impactY, burstColor, Phaser.Math.Clamp(Math.round(impactSpeed * 1.5), 4, 16), impactSpeed * 8)
+
+      if (targetA) {
+        this.damageSlingshotTarget(targetA, impactSpeed * (projectileHit ? 1.2 : 0.72), impactX, impactY)
+      }
+      if (targetB && targetB !== targetA) {
+        this.damageSlingshotTarget(targetB, impactSpeed * (projectileHit ? 1.2 : 0.72), impactX, impactY)
+      }
+
+      const shouldDamageBlocks = projectileHit || Boolean(targetHit) || Boolean(blockA && blockB)
+      if (shouldDamageBlocks && blockA) {
+        this.damageSlingshotBlock(blockA, impactSpeed * (projectileHit ? 1 : 0.46), impactX, impactY)
+      }
+      if (shouldDamageBlocks && blockB && blockB !== blockA) {
+        this.damageSlingshotBlock(blockB, impactSpeed * (projectileHit ? 1 : 0.46), impactX, impactY)
+      }
+    }
+  }
+
+  private findSlingshotBlockByBody(body: MatterJS.BodyType): SlingshotBlock | undefined {
+    return this.slingshot?.blocks.find((block) => bodyBelongsToMatterShape(body, block.shape))
+  }
+
+  private findSlingshotTargetByBody(body: MatterJS.BodyType): SlingshotTarget | undefined {
+    return this.slingshot?.targets.find((target) => bodyBelongsToMatterShape(body, target.shape))
+  }
+
+  private damageSlingshotTarget(target: SlingshotTarget, damage: number, x: number, y: number): void {
+    if (!this.slingshot || this.time.now - target.lastImpactAt < 70) {
+      return
+    }
+
+    target.lastImpactAt = this.time.now
+    target.integrity -= damage
+    const remaining = Phaser.Math.Clamp(target.integrity / target.maxIntegrity, 0, 1)
+    target.shape.art?.setTintFill(remaining < 0.45 ? parseColor('#ffffff') : parseColor(this.blueprint.palette.accentAlt))
+    target.shape.glow?.setAlpha(0.18 + (1 - remaining) * 0.28)
+
+    if (target.shape.art) {
+      this.tweens.add({
+        targets: target.shape.art,
+        scaleX: 1.1,
+        scaleY: 1.1,
+        duration: 70,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+      })
+      this.time.delayedCall(90, () => target.shape.art?.clearTint())
+    }
+
+    if (target.integrity <= 0) {
+      this.destroySlingshotTarget(target, x, y)
+    }
+  }
+
+  private damageSlingshotBlock(block: SlingshotBlock, impactSpeed: number, x: number, y: number): void {
+    if (!this.slingshot || this.time.now - block.lastImpactAt < 90) {
+      return
+    }
+
+    const stats = SLINGSHOT_MATERIAL_STATS[block.material]
+    const damage = impactSpeed * stats.damageScale
+    if (damage < 0.72) {
+      return
+    }
+
+    block.lastImpactAt = this.time.now
+    block.integrity -= damage
+    const fractureLevel = 1 - Phaser.Math.Clamp(block.integrity / block.maxIntegrity, 0, 1)
+
+    if (fractureLevel > block.fractureLevel + 0.16) {
+      block.fractureLevel = fractureLevel
+      block.shape.art?.setAlpha(Phaser.Math.Clamp(1 - fractureLevel * 0.28, 0.62, 1))
+      block.shape.art?.setTint(parseColor(block.material === 'glass' ? '#dffcff' : '#ffe3a5'))
+      this.cameras.main.shake(block.material === 'brass' ? 70 : 95, block.material === 'brass' ? 0.002 : 0.0035)
+    }
+
+    if (block.integrity <= 0 && block.material !== 'brass') {
+      this.breakSlingshotBlock(block, x, y)
+    }
+  }
+
+  private destroySlingshotTarget(target: SlingshotTarget, x: number, y: number): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    const index = this.slingshot.targets.indexOf(target)
+    if (index < 0) {
+      return
+    }
+
+    this.addScore(30)
+    this.emitImpactBurst(x, y, this.blueprint.palette.accentAlt, 24, 86, 0.9)
+    target.shape.art?.destroy()
+    target.shape.shadow?.destroy()
+    target.shape.glow?.destroy()
+    target.shape.destroy()
+    this.slingshot.targets.splice(index, 1)
+    this.cameras.main.shake(150, 0.006)
+  }
+
+  private breakSlingshotBlock(block: SlingshotBlock, x: number, y: number): void {
+    if (!this.slingshot) {
+      return
+    }
+
+    const index = this.slingshot.blocks.indexOf(block)
+    if (index < 0) {
+      return
+    }
+
+    this.addScore(block.material === 'glass' ? 4 : 2)
+    this.emitImpactBurst(x, y, SLINGSHOT_MATERIAL_STATS[block.material].particleColor, block.material === 'glass' ? 20 : 12, 66, 0.82)
+    block.shape.art?.destroy()
+    block.shape.shadow?.destroy()
+    block.shape.glow?.destroy()
+    block.shape.destroy()
+    this.slingshot.blocks.splice(index, 1)
   }
 
   private updateMatterTargets(): void {
@@ -1733,19 +2089,14 @@ class GeneratedGameScene extends Phaser.Scene {
 
     for (const target of [...this.slingshot.targets]) {
       const destroyed =
+        target.integrity <= 0 ||
         target.shape.body.speed > target.integrity ||
         target.shape.y > GAME_HEIGHT - 48 ||
         target.shape.x < 440 ||
         target.shape.x > GAME_WIDTH + 80
 
       if (destroyed) {
-        this.addScore(30)
-        this.spawnShard(target.shape.x, target.shape.y)
-        target.shape.art?.destroy()
-        target.shape.shadow?.destroy()
-        target.shape.destroy()
-        this.slingshot.targets.splice(this.slingshot.targets.indexOf(target), 1)
-        this.cameras.main.shake(120, 0.005)
+        this.destroySlingshotTarget(target, target.shape.x, target.shape.y)
       }
     }
   }
@@ -1767,6 +2118,7 @@ class GeneratedGameScene extends Phaser.Scene {
         }
         block.shape.art?.destroy()
         block.shape.shadow?.destroy()
+        block.shape.glow?.destroy()
         block.shape.destroy()
         this.slingshot.blocks.splice(this.slingshot.blocks.indexOf(block), 1)
       }
@@ -1788,12 +2140,17 @@ class GeneratedGameScene extends Phaser.Scene {
 
     if (this.slingshot.projectile) {
       this.syncAttachedArt(this.slingshot.projectile, 9, 1)
+      this.updateSlingshotProjectileTrail(this.slingshot.projectile)
     }
   }
 
   private syncAttachedArt(shape: MatterShape, depth: number, alpha: number): void {
     shape.art?.setPosition(shape.x, shape.y).setRotation(shape.rotation).setDepth(depth).setAlpha(alpha)
-    shape.shadow?.setPosition(shape.x, GAME_HEIGHT - 66).setDepth(depth - 1)
+    shape.shadow
+      ?.setPosition(shape.x, GAME_HEIGHT - 66)
+      .setScale(Phaser.Math.Clamp(1 - Math.max(0, GAME_HEIGHT - 80 - shape.y) * 0.0022, 0.34, 1.05), 1)
+      .setDepth(depth - 2)
+    shape.glow?.setPosition(shape.x, shape.y).setRotation(shape.rotation).setDepth(depth - 1)
   }
 
   private prepareAstralCutoutTextures(): void {
@@ -1916,6 +2273,40 @@ class GeneratedGameScene extends Phaser.Scene {
     return this.add.image(x, y, ASTRAL_CUTOUT_TEXTURES.projectile).setDisplaySize(58, 58).setDepth(9)
   }
 
+  private createSlingshotShadow(x: number, y: number, width: number, height: number): Phaser.GameObjects.Ellipse {
+    return this.add
+      .ellipse(x, y, width, height, 0x020507, 0.28)
+      .setDepth(5)
+      .setBlendMode(Phaser.BlendModes.MULTIPLY)
+  }
+
+  private createSlingshotGlow(x: number, y: number, size: number, color: string): Phaser.GameObjects.Shape {
+    return this.add
+      .circle(x, y, size * 0.5, parseColor(color), 0.14)
+      .setDepth(6)
+      .setBlendMode(Phaser.BlendModes.ADD)
+  }
+
+  private updateSlingshotProjectileTrail(projectile: MatterShape): void {
+    if (!this.slingshot || !this.slingshot.projectileLaunched || projectile.body.speed < 2.8) {
+      return
+    }
+
+    if (this.time.now - this.slingshot.lastTrailAt < 34) {
+      return
+    }
+
+    this.slingshot.lastTrailAt = this.time.now
+    this.emitImpactBurst(
+      projectile.x - projectile.body.velocity.x * 0.42,
+      projectile.y - projectile.body.velocity.y * 0.42,
+      this.blueprint.palette.accent,
+      4,
+      18,
+      0.56,
+    )
+  }
+
   private updateFloatingShards(): void {
     const delta = this.game.loop.delta / 1000
 
@@ -1938,9 +2329,9 @@ class GeneratedGameScene extends Phaser.Scene {
 
     if (this.runtimeProfile === 'slingshot-destruction') {
       const loadedShot = this.slingshot?.projectile ? 1 : 0
-      const levelLabel = this.slingshot ? `   Level ${this.slingshot.levelIndex + 1}/${this.slingshot.levels.length}` : ''
+      const levelLabel = this.slingshot ? `   Chamber ${this.slingshot.levelIndex + 1}/${this.slingshot.levels.length}` : ''
       this.statusText.setText(
-        `Targets ${this.slingshot?.targets.length ?? 0}   Shots ${(this.slingshot?.shotsRemaining ?? 0) + loadedShot}   Score ${this.score}${levelLabel}`,
+        `Cores ${this.slingshot?.targets.length ?? 0}   Seeds ${(this.slingshot?.shotsRemaining ?? 0) + loadedShot}   Score ${this.score}${levelLabel}`,
       )
       return
     }
@@ -2095,6 +2486,14 @@ function slingshotArtHeightScale(material: SlingshotMaterial, width: number, hei
     return width >= height ? 1.28 : 1.1
   }
   return width >= height ? 1.4 : 1.28
+}
+
+function bodyBelongsToMatterShape(body: MatterJS.BodyType, shape: MatterShape): boolean {
+  if (body === shape.body) {
+    return true
+  }
+
+  return shape.body.parts.some((part) => part === body)
 }
 
 function parseColor(color: string): number {

@@ -30,17 +30,17 @@ export function buildAstralOrchardDemoResult(): GenerationResult {
         'Trigger a chain reaction and move to the next chamber',
       ],
       mechanicHighlights: [
-        'Three authored destruction chambers',
-        'Wood, glass, and brass supports with different feel',
-        'Shot preservation across the full run',
+        'Three authored destruction chambers with run-level shot preservation',
+        'Wood, glass, and brass supports with different resistance, mass, and impact feedback',
+        'Readable tension, trajectory preview, projectile trail, collision VFX, and restart/fullscreen shortcuts',
       ],
       implementationNotes: [
         'Use Matter bodies for projectiles, targets, and support pieces.',
-        'Treat each chamber as an authored puzzle instead of procedural debris.',
+        'Damage targets and fragile supports from real collision speed instead of only checking out-of-bounds collapse.',
       ],
       productionBacklog: [
-        'Swap placeholder geometry for painted sprites and bespoke hit VFX.',
-        'Add a world map, restart flow, and chamber medals.',
+        'Add bespoke audio, chamber medals, and a world map.',
+        'Create more hand-authored chambers with tuned difficulty curves.',
         'Pipe real uploaded assets into the runtime visuals instead of abstract shapes.',
       ],
       levelMoments: [
@@ -77,12 +77,12 @@ export function buildAstralOrchardDemoResult(): GenerationResult {
         specialMechanic: 'destructible-structures',
       },
       physics: {
-        gravity: 1.18,
-        bounce: 0.42,
-        friction: 0.08,
-        drag: 0.012,
-        projectilePower: 10.5,
-        structuralIntegrity: 7.2,
+        gravity: 1.12,
+        bounce: 0.38,
+        friction: 0.1,
+        drag: 0.014,
+        projectilePower: 9.8,
+        structuralIntegrity: 6.6,
       },
       hero: {
         name: 'Luma Vale',

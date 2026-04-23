@@ -201,10 +201,6 @@ export default function App() {
     return (
       <main className="demo-fullscreen-shell">
         <div className="demo-hud-overlay">
-          <div>
-            <strong>Astral Orchard</strong>
-            <span>Arrastra hacia atrás y suelta. WASD/flechas tensan, espacio dispara.</span>
-          </div>
           <button className="secondary-button" type="button" onClick={requestFullscreen}>
             Pantalla completa
           </button>
