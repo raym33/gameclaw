@@ -123,6 +123,18 @@ type TaskStationState = {
   bounceOffset: number
 }
 
+type MachineMotionState = {
+  def: EcoTaskDefinition
+  baseX: number
+  baseY: number
+  rings: Phaser.GameObjects.Ellipse[]
+  spinners: Phaser.GameObjects.Container[]
+  orbiters: Phaser.GameObjects.Image[]
+  pulses: Phaser.GameObjects.Ellipse[]
+  mover?: Phaser.GameObjects.Image
+  routePhase: number
+}
+
 type PopupState = {
   container: Phaser.GameObjects.Container
   title: Phaser.GameObjects.Text
@@ -633,8 +645,10 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   private dog!: ActorState
   private activeRole: ActorRole = 'cat'
   private tasks: TaskStationState[] = []
+  private machines: MachineMotionState[] = []
   private animals: AnimalState[] = []
   private currentTask: TaskStationState | null = null
+  private pendingAutoOpenTask: TaskStationState | null = null
   private popup!: PopupState
   private popupTask: TaskStationState | null = null
   private promptText!: Phaser.GameObjects.Text
@@ -649,6 +663,8 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   private paused = false
   private completedCount = 0
   private ecoScore = 0
+  private guidanceOverrideText = ''
+  private guidanceOverrideUntil = 0
   private readonly completedTaskIds = new Set<TaskId>()
   private readonly zoneProgress: Record<TaskZone, number> = {
     energy: 0,
@@ -702,6 +718,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.updateClouds(delta)
     this.updateAnimals(delta)
     this.updateTaskStations()
+    this.updateMachineMotions(delta)
     this.updateTaskPrompt()
     this.updateHud()
   }
@@ -853,18 +870,115 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       const station = { def, pedestal, glow, marker, label, placed: false, bounceOffset: Phaser.Math.FloatBetween(0, Math.PI * 2) }
 
       marker.setInteractive({ useHandCursor: true })
-      marker.on('pointerdown', () => {
+      marker.on('pointerdown', (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation()
         if (this.popupTask) {
           return
         }
 
         if (this.getActiveDistanceTo(def.x, def.y) <= TASK_INTERACTION_RADIUS + 24) {
           this.openTaskPopup(station)
+        } else {
+          this.getActiveActor().clickTarget = new Phaser.Math.Vector2(def.x, def.y + 46)
+          this.pendingAutoOpenTask = station
+          this.guidanceOverrideText = `Vamos hacia: ${def.label}. Acercate para activarlo.`
+          this.guidanceOverrideUntil = this.time.now + 2200
         }
       })
 
       return station
     })
+
+    this.machines = this.tasks.map((station) => this.createMachineMotion(station))
+  }
+
+  private createMachineMotion(station: TaskStationState): MachineMotionState {
+    const { def } = station
+    const rings = [
+      this.add
+        .ellipse(def.x, def.y + 8, 134, 92, 0xffffff, 0)
+        .setStrokeStyle(3, parseColor('#ffffff'), 0.1)
+        .setDepth(9),
+      this.add
+        .ellipse(def.x, def.y + 8, 178, 124, 0xffffff, 0)
+        .setStrokeStyle(2, parseColor(this.blueprint.palette.accentAlt), 0.08)
+        .setDepth(9),
+    ]
+    const motion: MachineMotionState = {
+      def,
+      baseX: def.x,
+      baseY: def.y,
+      rings,
+      spinners: [],
+      orbiters: [],
+      pulses: [],
+      routePhase: Phaser.Math.FloatBetween(0, 1),
+    }
+
+    if (def.id === 'wind-turbines') {
+      motion.spinners.push(
+        this.createBladeSpinner(def.x - 34, def.y - 38, 0.74),
+        this.createBladeSpinner(def.x + 3, def.y - 56, 0.9),
+        this.createBladeSpinner(def.x + 40, def.y - 32, 0.66),
+      )
+    }
+
+    if (def.id === 'solar-tractor') {
+      motion.mover = this.add
+        .image(def.x - 112, def.y + 72, ECO_TEXTURES['solar-tractor'])
+        .setDisplaySize(58, 58)
+        .setDepth(16)
+        .setAlpha(0)
+    }
+
+    const pulseTasks: TaskId[] = [
+      'solar-panels',
+      'energy-automation',
+      'water-automation',
+      'water-purifier',
+      'eco-farm',
+      'eco-livestock',
+    ]
+    if (pulseTasks.includes(def.id)) {
+      for (let i = 0; i < 8; i += 1) {
+        const color = def.zone === 'water' ? '#7fd2ff' : def.zone === 'energy' ? '#ffe27a' : '#84df9f'
+        motion.pulses.push(this.add.ellipse(def.x, def.y, 8, 12, parseColor(color), 0.12).setDepth(15))
+      }
+    }
+
+    if (def.id === 'insect-control' || def.id === 'eco-farm') {
+      const textureKey = def.id === 'insect-control' ? ANIMAL_TEXTURES.bee : butterflyTextureKey(0)
+      for (let i = 0; i < 4; i += 1) {
+        motion.orbiters.push(this.add.image(def.x, def.y, textureKey).setDisplaySize(26, 26).setDepth(17).setAlpha(0.28))
+      }
+    }
+
+    if (def.id === 'solar-panels' || def.id === 'water-purifier') {
+      for (let i = 0; i < 4; i += 1) {
+        motion.orbiters.push(this.add.image(def.x, def.y, sparkleTextureKey()).setDisplaySize(18, 18).setDepth(17).setAlpha(0.18))
+      }
+    }
+
+    return motion
+  }
+
+  private createBladeSpinner(x: number, y: number, scale: number): Phaser.GameObjects.Container {
+    const blades = this.add.graphics()
+    blades.fillStyle(parseColor('#f9fbff'), 0.96)
+    blades.fillTriangle(0, -5, 8, 3, 0, -42)
+    blades.fillTriangle(5, 1, 42, -9, 12, 10)
+    blades.fillTriangle(-4, 4, -12, 38, 9, 12)
+    blades.fillStyle(parseColor('#bde9ff'), 0.88)
+    blades.fillCircle(0, 0, 7)
+    blades.fillStyle(parseColor('#ffffff'), 0.95)
+    blades.fillCircle(-2, -2, 3)
+
+    return this.add.container(x, y, [blades]).setScale(scale).setDepth(18).setAlpha(0.38)
   }
 
   private createHud(): void {
@@ -1068,6 +1182,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       }
 
       this.getActiveActor().clickTarget = new Phaser.Math.Vector2(worldPoint.x, worldPoint.y)
+      this.pendingAutoOpenTask = null
 
       const nearbyTask = this.tasks.find(
         (task) =>
@@ -1232,17 +1347,118 @@ class GuardiansFarmScene extends GuardiansBaseScene {
 
   private updateTaskStations(): void {
     for (const task of this.tasks) {
+      const isCurrent = this.currentTask?.def.id === task.def.id
       const pulse = Math.sin(this.time.now * 0.004 + task.bounceOffset)
       task.glow
-        .setAlpha(task.placed ? 0.18 + pulse * 0.04 : 0.16 + pulse * 0.08)
-        .setScale(task.placed ? 1.12 : 1 + pulse * 0.06)
+        .setAlpha(task.placed ? 0.22 + pulse * 0.05 : isCurrent ? 0.28 + pulse * 0.1 : 0.16 + pulse * 0.08)
+        .setScale(task.placed ? 1.18 + pulse * 0.03 : isCurrent ? 1.16 + pulse * 0.07 : 1 + pulse * 0.06)
       task.marker
         .setY(task.def.y + pulse * (task.placed ? 4 : 6))
-        .setScale(task.placed ? 0.98 + pulse * 0.02 : 1 + pulse * 0.03)
+        .setScale(task.placed ? 1.02 + pulse * 0.02 : isCurrent ? 1.08 + pulse * 0.04 : 1 + pulse * 0.03)
       task.pedestal.setFillStyle(parseColor(task.placed ? this.blueprint.palette.accentAlt : '#17354b'), task.placed ? 0.22 : 0.18)
-      task.label.setAlpha(task.placed ? 0.96 : 0.84)
+      task.label.setAlpha(task.placed || isCurrent ? 0.98 : 0.84)
       task.marker.setTint(task.placed ? 0xffffff : 0xeaf6ee)
     }
+  }
+
+  private updateMachineMotions(delta: number): void {
+    for (const machine of this.machines) {
+      const placed = this.taskIsPlaced(machine.def.id)
+      const isCurrent = this.currentTask?.def.id === machine.def.id
+      const emphasis = placed ? 1 : isCurrent ? 0.64 : 0.28
+      const wave = Math.sin(this.time.now * 0.004 + machine.routePhase * Math.PI * 2)
+
+      machine.rings.forEach((ring, index) => {
+        const scale = 1 + (index * 0.14) + wave * (placed ? 0.06 : 0.03)
+        ring
+          .setScale(scale)
+          .setStrokeStyle(index === 0 ? 3 : 2, parseColor(placed ? this.blueprint.palette.accentAlt : '#ffffff'), (0.08 + emphasis * 0.22) / (index + 1))
+      })
+
+      machine.spinners.forEach((spinner, index) => {
+        spinner.rotation += delta * (placed ? 5.4 + index * 0.65 : 0.85)
+        spinner.setAlpha(placed ? 0.96 : isCurrent ? 0.72 : 0.34)
+      })
+
+      machine.orbiters.forEach((orbiter, index) => {
+        const radius = 42 + index * 9
+        const speed = placed ? 0.0028 : 0.0011
+        const angle = this.time.now * speed + index * ((Math.PI * 2) / Math.max(1, machine.orbiters.length))
+        const yRadius = machine.def.zone === 'nature' ? 32 : 24
+        orbiter
+          .setPosition(machine.baseX + Math.cos(angle) * radius, machine.baseY - 14 + Math.sin(angle) * yRadius)
+          .setAlpha(placed ? 0.92 : isCurrent ? 0.54 : 0.2)
+          .setScale(Math.cos(angle) < 0 ? -1 : 1, 1)
+      })
+
+      machine.pulses.forEach((pulse, index) => {
+        const beat = (Math.sin(this.time.now * 0.009 + index * 0.82) + 1) * 0.5
+        this.updateMachinePulse(machine, pulse, index, beat, emphasis)
+      })
+
+      if (machine.mover) {
+        if (placed) {
+          const phase = (this.time.now * 0.00018 + machine.routePhase) % 1
+          const route = Math.sin(phase * Math.PI * 2)
+          machine.mover
+            .setAlpha(0.92)
+            .setPosition(machine.baseX - 118 + phase * 236, machine.baseY + 70 + route * 18)
+            .setFlipX(phase > 0.5)
+        } else {
+          machine.mover.setAlpha(isCurrent ? 0.22 : 0)
+        }
+      }
+    }
+  }
+
+  private updateMachinePulse(
+    machine: MachineMotionState,
+    pulse: Phaser.GameObjects.Ellipse,
+    index: number,
+    beat: number,
+    emphasis: number,
+  ): void {
+    const col = index % 4
+    const row = Math.floor(index / 4)
+
+    if (machine.def.id === 'solar-panels') {
+      pulse
+        .setPosition(machine.baseX - 46 + col * 30, machine.baseY - 42 - beat * 26 + row * 10)
+        .setDisplaySize(8 + beat * 10, 8 + beat * 10)
+        .setFillStyle(parseColor('#ffe27a'), emphasis * (0.18 + beat * 0.45))
+      return
+    }
+
+    if (machine.def.id === 'energy-automation') {
+      const angle = index * 0.78 + this.time.now * 0.003
+      pulse
+        .setPosition(machine.baseX + Math.cos(angle) * 44, machine.baseY - 8 + Math.sin(angle) * 28)
+        .setDisplaySize(7 + beat * 8, 7 + beat * 8)
+        .setFillStyle(parseColor('#ffe27a'), emphasis * (0.16 + beat * 0.58))
+      return
+    }
+
+    if (machine.def.id === 'water-automation') {
+      pulse
+        .setPosition(machine.baseX - 66 + col * 44, machine.baseY + 28 + row * 28 + beat * 18)
+        .setDisplaySize(8, 12 + beat * 8)
+        .setFillStyle(parseColor('#7fd2ff'), emphasis * (0.2 + beat * 0.55))
+      return
+    }
+
+    if (machine.def.id === 'water-purifier') {
+      pulse
+        .setPosition(machine.baseX - 26 + col * 18, machine.baseY + 38 - beat * 42 + row * 18)
+        .setDisplaySize(7 + beat * 6, 7 + beat * 6)
+        .setFillStyle(parseColor('#c9f5ff'), emphasis * (0.22 + beat * 0.48))
+      return
+    }
+
+    const cropColor = machine.def.id === 'eco-livestock' ? '#ffd66d' : '#84df9f'
+    pulse
+      .setPosition(machine.baseX - 58 + col * 38, machine.baseY + 32 + row * 26 - beat * 10)
+      .setDisplaySize(8 + beat * 12, 8 + beat * 12)
+      .setFillStyle(parseColor(cropColor), emphasis * (0.12 + beat * 0.44))
   }
 
   private updateTaskPrompt(): void {
@@ -1261,6 +1477,13 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       ) ?? null
 
     if (!this.currentTask) {
+      this.promptText.setVisible(false)
+      return
+    }
+
+    if (this.pendingAutoOpenTask === this.currentTask) {
+      this.pendingAutoOpenTask = null
+      this.openTaskPopup(this.currentTask)
       this.promptText.setVisible(false)
       return
     }
@@ -1298,6 +1521,9 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     } else if (this.completedCount >= TASKS.length) {
       this.guidanceText.setText('¡El campo esta casi listo para celebrar!')
       this.nextTaskText.setText('Siguiente:\nGran celebracion')
+    } else if (this.time.now < this.guidanceOverrideUntil) {
+      this.guidanceText.setText(this.guidanceOverrideText)
+      this.nextTaskText.setText('Activado:\nCampo mas vivo')
     } else {
       this.guidanceText.setText('Explora el campo y busca otra estacion brillante.')
       const pendingTask = this.tasks.find((task) => !task.placed)
@@ -1339,7 +1565,10 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.dog.pose = 'happy'
     this.emitMagicBurst(task.def.x, task.def.y, this.blueprint.palette.accentAlt)
     this.emitMagicBurst(task.def.x, task.def.y, this.blueprint.palette.accent)
+    this.guidanceOverrideText = task.def.celebration
+    this.guidanceOverrideUntil = this.time.now + 3400
     this.cameras.main.shake(120, 0.0026)
+    this.cameras.main.flash(180, 255, 245, 190, false)
 
     for (const animal of this.animals) {
       if (animal.zone === task.def.zone || Phaser.Math.Distance.Between(animal.baseX, animal.baseY, task.def.x, task.def.y) < 260) {
