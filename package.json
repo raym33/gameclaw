@@ -2,6 +2,12 @@
   "name": "gameclaw",
   "private": true,
   "version": "0.0.0",
+  "description": "Turn rough game references into polished playable browser slices with Codex, Phaser, and stable runtime profiles.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raym33/gameclaw.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "run-p dev:server dev:client",

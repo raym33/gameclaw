@@ -1,8 +1,18 @@
 # Gameclaw
 
-Gameclaw turns rough game references into playable browser prototypes.
+Gameclaw helps Codex turn rough game references into polished playable browser slices.
 
-Upload sketches, sprite sheets, screenshots, handwritten notes or moodboards. Gameclaw reads the idea, builds a structured game blueprint, chooses a stable runtime profile, and renders a vertical slice in Phaser.
+Upload sketches, sprite sheets, screenshots, handwritten notes or moodboards. Gameclaw turns that material into a structured game blueprint, picks a stable runtime profile, and builds a browser game in Phaser.
+
+The goal is not “any game”. The goal is getting to a small game that already feels intentional: coherent art direction, clean controls, reliable physics, readable motion, and enough final art coverage that the slice does not look like a prototype.
+
+## What This Repo Is
+
+- A browser game generator built around stable runtime profiles.
+- A Codex skill that teaches how to use this repo fast.
+- A quality bar for movement, physics, sprites, asset coverage, and game feel.
+
+For polished or sellable requests, the repo is meant to push Codex to generate and integrate all missing images, sprite states, props, and feedback art needed for the loop to read well in motion.
 
 ## What It Can Build
 
@@ -13,6 +23,14 @@ Upload sketches, sprite sheets, screenshots, handwritten notes or moodboards. Ga
 - Slingshot destruction with Matter physics
 
 The system favors stable playable slices over pretending it can generate any full game from scratch.
+
+## Quality Direction
+
+- Prefer one strong loop over a broad but unfinished game.
+- Use real raster assets instead of leaving the final layer on primitives.
+- Add more sprites when motion reads badly.
+- Keep trajectory previews, collisions, and launches on the same motion model.
+- Treat game feel and visual integration as implementation work, not polish-afterthoughts.
 
 ## Stack
 
@@ -42,6 +60,12 @@ Direct demo:
 http://localhost:5173/?demo=astral-orchard
 ```
 
+Production build:
+
+```text
+http://localhost:3001/?demo=astral-orchard
+```
+
 ## Local AI Backends
 
 Gameclaw can use local or OpenAI-compatible models.
@@ -65,18 +89,12 @@ AI_API_KEY=lm-studio
 
 If no AI backend is available, the app falls back to a local demo blueprint.
 
-## Build
+## Validate
 
 ```bash
 npm run lint
 npm run build
 npm run start
-```
-
-Production URL:
-
-```text
-http://localhost:3001
 ```
 
 ## Codex Skill
@@ -96,10 +114,22 @@ $gameclaw
 Example prompt:
 
 ```text
-Use $gameclaw to turn these sketches, sprites and notes into a playable browser prototype.
+Use $gameclaw to turn these sketches, sprites and notes into a polished playable browser vertical slice with professional movement, sprites, physics, and all missing images generated and integrated.
 ```
 
-The skill teaches Codex how to work with this repo, including runtime profiles, local AI backends, the Astral Orchard demo, Phaser/Matter validation, and when to use original sprites instead of procedural placeholders.
+The skill teaches Codex how to work with this repo, including runtime profiles, local AI backends, Phaser/Matter validation, sprite fidelity, asset coverage, and the quality bar for movement and physics.
+
+Install from the repo root:
+
+```bash
+./skill/scripts/install.sh
+```
+
+Then invoke:
+
+```text
+$gameclaw
+```
 
 ## License
 
