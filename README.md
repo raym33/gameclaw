@@ -2,7 +2,7 @@
 
 Gameclaw helps Codex turn rough game references into polished playable browser slices.
 
-Upload sketches, sprite sheets, screenshots, handwritten notes or moodboards. Gameclaw turns that material into a structured game blueprint, picks a stable runtime profile, and builds a browser game in Phaser.
+Upload sketches, sprite sheets, screenshots, handwritten notes or moodboards. Gameclaw turns that material into a structured game blueprint, picks a stable runtime profile, chooses a more specific executable game type kit inside that runtime, and builds a browser game in Phaser.
 
 The goal is not “any game”. The goal is getting to a small game that already feels intentional: coherent art direction, clean controls, reliable physics, readable motion, and enough final art coverage that the slice does not look like a prototype.
 
@@ -10,7 +10,7 @@ If the target is “like the games people buy on app stores”, Gameclaw should 
 
 ## What This Repo Is
 
-- A browser game generator built around stable runtime profiles.
+- A browser game generator built around stable runtime profiles and reusable game type kits.
 - A Codex skill that teaches how to use this repo fast.
 - A quality bar for movement, physics, sprites, asset coverage, and game feel.
 
@@ -18,13 +18,14 @@ For polished or sellable requests, the repo is meant to push Codex to generate a
 
 ## What It Can Build
 
-- Arcade survivor
-- Lane runner
-- Relic hunt
-- Platformer expedition
+- Spell swarm survivor
+- Orbital defense arena
+- Traffic weave, courier, or hazard rush runner
+- Maze scavenger or pressure relic hunt
+- Treasure route, precision climb, or combat gauntlet platformer
 - Slingshot destruction with Matter physics
 
-The system favors stable playable slices over pretending it can generate any full game from scratch.
+The system favors stable playable slices over pretending it can generate any full game from scratch. Today it ships 5 executable runtime families and 11 narrower game type kits on top of them.
 
 ## Quality Direction
 
@@ -35,7 +36,7 @@ The system favors stable playable slices over pretending it can generate any ful
 - Treat game feel and visual integration as implementation work, not polish-afterthoughts.
 - For commercial-looking output, push detail density on the main screen instead of stopping at a technically correct prototype.
 
-The repo now also includes reusable runtime presets and scene scaffolds in `src/game/runtimeTemplates.ts` and `src/game/runtimeSceneScaffold.ts`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, finish overlays, and slingshot camera behavior instead of rediscovering them every time.
+The repo now also includes reusable runtime presets, scene scaffolds, and game type catalogs in `src/game/runtimeTemplates.ts`, `src/game/runtimeSceneScaffold.ts`, `shared/gameTypeKits.ts`, and `src/game/gameTypeStageLayouts.ts`, so Codex can reuse genre-level defaults for HUD, timers, player bodies, finish overlays, stage layouts, and gameplay tuning instead of rediscovering them every time.
 
 ## Stack
 
@@ -122,7 +123,7 @@ Example prompt:
 Use $gameclaw to turn these sketches, sprites and notes into a polished playable browser vertical slice with professional movement, sprites, physics, and all missing images generated and integrated.
 ```
 
-The skill teaches Codex how to work with this repo, including runtime profiles, executable preset kits by genre, reusable scene scaffolds, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
+The skill teaches Codex how to work with this repo, including runtime profiles, executable game type kits, preset kits by genre, reusable scene scaffolds, asset production workflow, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
 
 Install from the repo root:
 

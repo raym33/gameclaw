@@ -13,6 +13,7 @@ import {
   deriveRuntimeProfile,
   type GenerationResult,
 } from '../shared/game'
+import { GAME_TYPE_KIT_LABELS } from '../shared/gameTypeKits'
 import { GameCanvas } from './components/GameCanvas'
 import { requestAstralOrchardDemo, requestGeneration } from './lib/api'
 
@@ -24,11 +25,11 @@ type UploadItem = {
 
 const PROMPT_SEEDS = [
   'Sube bocetos de personajes, mapas, HUDs, sprites o fotos de libreta.',
-  'Pide algo concreto o raro: runner, metroidvania, slingshot physics, ideas temporales.',
-  'Gameclaw lo colapsa a un vertical slice estable en vez de inventar un proyecto roto.',
+  'Pide algo concreto o raro: survivor, runner, precision platformer, relic hunt, slingshot physics.',
+  'Gameclaw lo colapsa a un vertical slice estable y ahora elige tambien un game type kit ejecutable.',
 ]
 
-const EXAMPLE_NOTES = `Quiero una mezcla rara: plataformas laterales con reliquias antiguas y una habilidad de rebobinado corto cuando fallas un salto. Si pido algo de tirachinas, catapulta o destrucción física, quiero que el sistema cambie de runtime y use cuerpos rígidos de verdad.`
+const EXAMPLE_NOTES = `Quiero algo entre precision platformer y expedicion arqueologica: saltos exactos, reliquias antiguas, recuperacion corta cuando fallas un salto y una pantalla principal bonita. Si pido runner, survivor o tirachinas, quiero que el sistema cambie al game type kit adecuado sin inventarse un runtime roto.`
 
 export default function App() {
   const [uploads, setUploads] = useState<UploadItem[]>([])
@@ -353,6 +354,9 @@ export default function App() {
                 <div className="result-badges">
                   <div className="template-pill">
                     {RUNTIME_LABELS[deriveRuntimeProfile(result.blueprint.systems)]}
+                  </div>
+                  <div className="template-pill secondary">
+                    {GAME_TYPE_KIT_LABELS[result.blueprint.gameTypeKit]}
                   </div>
                   <div className="template-pill secondary">
                     {SUPPORT_LEVEL_LABELS[result.blueprint.supportLevel]}

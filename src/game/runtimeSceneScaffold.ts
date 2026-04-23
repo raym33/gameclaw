@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 
 import { RUNTIME_LABELS, type GameBlueprint, type RuntimeProfile } from '../../shared/game'
+import { GAME_TYPE_KIT_LABELS } from '../../shared/gameTypeKits'
 import type { RuntimeSceneTemplate } from './runtimeTemplates'
 
 export type RuntimeHudElements = {
@@ -161,7 +162,7 @@ function resolveHudSupportText(
     return template.hud.restartText ?? 'R reinicia la run · F alterna pantalla completa'
   }
 
-  return `${RUNTIME_LABELS[runtimeProfile]} / ${blueprint.supportLevel.toUpperCase()} / ${blueprint.noveltyHook}`
+  return `${GAME_TYPE_KIT_LABELS[blueprint.gameTypeKit]} / ${RUNTIME_LABELS[runtimeProfile]} / ${blueprint.supportLevel.toUpperCase()}`
 }
 
 function parseColor(color: string): number {

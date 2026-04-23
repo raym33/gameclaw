@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 
 import { GAME_BLUEPRINT_JSON_SCHEMA, normalizeBlueprint } from './blueprint'
 import type { GameBlueprint, GenerationProviderKind } from '../shared/game'
+import { GAME_TYPE_KITS } from '../shared/gameTypeKits'
 
 type UploadedImage = {
   name: string
@@ -279,6 +280,7 @@ function buildCreativeDirectionPrompt(notes: string, images: UploadedImage[]): s
     'You must think in composable systems, not one-off freeform game descriptions.',
     'Use the images as the primary source of truth. Notes refine the idea but should not override strong visual evidence.',
     'The current runtime supports these stable profile families through systems: arena survivor, lane runner, relic hunt, platformer expedition, and slingshot destruction.',
+    `Choose the nearest gameTypeKit for the request. Supported gameTypeKit ids: ${GAME_TYPE_KITS.map((kit) => kit.id).join(', ')}.`,
     'Choose system values that collapse the concept into one of those stable profiles while preserving the most original hook.',
     'If the requested idea is unusual, set supportLevel to hybrid or approximate and explain the approximationStrategy honestly.',
     'Use matter-rigid-body only for slingshot or destruction-driven concepts.',

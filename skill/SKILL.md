@@ -26,11 +26,13 @@ Default to a small, excellent slice over a broad, unfinished game.
 Classify the request before editing:
 
 - **Blueprint/AI**: `server/blueprint.ts`, `server/openai.ts`, `shared/game.ts`
+- **Game type catalog**: `shared/gameTypeKits.ts`
 - **API/upload**: `server/index.ts`, `src/lib/api.ts`
 - **UI/demo shell**: `src/App.tsx`, `src/index.css`
 - **Playable runtime**: `src/game/createGame.ts`
 - **Runtime templates**: `src/game/runtimeTemplates.ts`
 - **Runtime scaffolds**: `src/game/runtimeSceneScaffold.ts`
+- **Stage layout kits**: `src/game/gameTypeStageLayouts.ts`
 - **Curated demo/assets**: `server/demo.ts`, `demo-inputs/sample-user`, `src/assets/astral-orchard`
 - **Skill packaging**: `skill/SKILL.md`, `skill/agents/openai.yaml`, `skill/references/*`
 
@@ -39,6 +41,7 @@ Classify the request before editing:
 - Prefer stable systems over freeform generated code.
 - Let AI choose intent, systems, tuning targets, art direction, and backlog. Let code and the engine execute gameplay.
 - Pick the nearest runtime profile instead of inventing a broad new architecture.
+- After choosing the runtime profile, pick the nearest executable game type kit so the slice does not fall back to the same generic tuning and layout every time.
 - Reuse and extend the existing runtime templates and scene scaffolds before adding new one-off scene wiring to `createGame.ts`.
 - Keep physics honest: use Matter when rigid-body interaction is the feature, not as decoration.
 - Use user-provided, curated, or generated raster assets before procedural placeholders when final visual quality matters.
@@ -53,7 +56,7 @@ Classify the request before editing:
 ## Production Workflow
 
 1. Reduce the ask to `fantasy + core loop + camera + movement + physics + win state`.
-2. Choose the runtime profile, the nearest genre playbook, and the nearest preset kit.
+2. Choose the runtime profile, the nearest executable game type kit, the nearest genre playbook, and the nearest preset kit.
 3. Build the smallest stable playable loop.
 4. Create the asset shot list for what is visible during the core minute of play.
 5. Generate or refine the asset family so the screen reads as one coherent product.
@@ -78,6 +81,7 @@ Before calling the task done, the slice should have:
 Load only what is needed:
 
 - For runtime/profile decisions, read [runtime-profiles.md](references/runtime-profiles.md).
+- For choosing a narrower playable product direction inside a runtime, read [game-type-kits.md](references/game-type-kits.md).
 - For production standards and what “good enough” means, read [quality-bar.md](references/quality-bar.md).
 - For minimum final asset coverage and when to generate more art, read [asset-coverage.md](references/asset-coverage.md).
 - For store-facing visual density and commercial presentation, read [app-store-quality.md](references/app-store-quality.md).

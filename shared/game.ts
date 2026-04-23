@@ -1,3 +1,5 @@
+import type { GameTypeKitId } from './gameTypeKits'
+
 export const CAMERA_MODES = ['top-down', 'side-view'] as const
 export const MOVEMENT_SYSTEMS = ['free-8dir', 'lane-switch', 'platformer', 'slingshot'] as const
 export const PHYSICS_MODELS = ['scripted-arcade', 'matter-rigid-body'] as const
@@ -139,6 +141,7 @@ export interface GameBlueprint {
   title: string
   tagline: string
   runtimeProfile: RuntimeProfile
+  gameTypeKit: GameTypeKitId
   supportLevel: SupportLevel
   genre: string
   playerFantasy: string

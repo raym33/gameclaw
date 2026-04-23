@@ -21,14 +21,15 @@ They are not final values. They are good defaults for:
 - asset shot lists
 - playtest focus
 
-The runtime layer now also has a matching preset registry in `src/game/runtimeTemplates.ts` and reusable scene scaffold helpers in `src/game/runtimeSceneScaffold.ts` for timers, HUD defaults, player body presets, finish overlays, support text, and slingshot camera behavior.
+The runtime layer now also has a matching preset registry in `src/game/runtimeTemplates.ts`, reusable scene scaffold helpers in `src/game/runtimeSceneScaffold.ts`, and executable game type kits in `shared/gameTypeKits.ts` plus `src/game/gameTypeStageLayouts.ts` for timers, HUD defaults, player body presets, finish overlays, support text, stage layouts, and gameplay tuning.
 
 ## How To Use Them
 
 1. Pick the preset that matches the chosen runtime profile.
-2. Reuse its systems and feel defaults as the first stable pass.
-3. Reuse its asset shot list to avoid under-generating the gameplay layer.
-4. Tune from there using the user references and browser playtests.
+2. Pick the nearest game type kit inside that runtime profile.
+3. Reuse its systems and feel defaults as the first stable pass.
+4. Reuse its asset shot list to avoid under-generating the gameplay layer.
+5. Tune from there using the user references and browser playtests.
 
 ## Fast Access
 

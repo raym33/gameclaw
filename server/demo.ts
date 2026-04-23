@@ -6,6 +6,7 @@ export function buildAstralOrchardDemoResult(): GenerationResult {
     {
       title: 'Astral Orchard',
       tagline: 'Collapse moonlit observatories with star-seeds and clean chain reactions.',
+      gameTypeKit: 'chain-reaction-siege',
       supportLevel: 'native',
       genre: 'Celestial slingshot destruction',
       playerFantasy:

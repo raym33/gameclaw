@@ -14,6 +14,8 @@ import {
   type GamePalette,
   type RuntimeProfile,
 } from '../../shared/game'
+import { getGameTypeKit, type GameTypeKit } from '../../shared/gameTypeKits'
+import { getPlatformerCourse, getRelicHuntLayout } from './gameTypeStageLayouts'
 import {
   createRuntimeFinishOverlay,
   createRuntimeHud,
@@ -360,6 +362,7 @@ class GeneratedGameScene extends Phaser.Scene {
   private readonly blueprint: GameBlueprint
   private readonly runtimeProfile: RuntimeProfile
   private readonly runtimeTemplate: RuntimeSceneTemplate
+  private readonly gameTypeDefinition: GameTypeKit
   private keys?: Record<string, Phaser.Input.Keyboard.Key>
   private player?: ShapeObject
   private playerHalfWidth = 14
@@ -397,6 +400,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.blueprint = blueprint
     this.runtimeProfile = runtimeProfile
     this.runtimeTemplate = getRuntimeSceneTemplate(runtimeProfile)
+    this.gameTypeDefinition = getGameTypeKit(blueprint.gameTypeKit)
   }
 
   preload(): void {
@@ -674,17 +678,20 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private updateArenaSurvivor(delta: number): void {
+    const tuning = this.gameTypeDefinition.tuning
     this.movePlayerFree(delta)
 
-    if (this.spawnAccumulator >= 1.05) {
+    if (this.spawnAccumulator >= (tuning?.enemySpawnInterval ?? 1.05)) {
       this.spawnAccumulator = 0
-      this.spawnEnemyAtEdge(72 + Math.min(this.score * 1.2, 100))
+      this.spawnEnemyAtEdge(
+        (tuning?.enemyBaseSpeed ?? 72) + Math.min(this.score * (tuning?.enemySpeedScoreFactor ?? 1.2), 100),
+      )
     }
 
     this.handleCombatInput()
     this.updateProjectiles(delta)
-    this.updateChasingEnemies(delta, 0.95)
-    this.collectNearbyShards(18, 5)
+    this.updateChasingEnemies(delta, tuning?.chaseMultiplier ?? 0.95)
+    this.collectNearbyShards(tuning?.shardCollectRadius ?? 18, tuning?.shardScore ?? 5)
   }
 
   private createLaneRunner(): void {
@@ -704,25 +711,26 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
+    const tuning = this.gameTypeDefinition.tuning
     const lanes = [GAME_WIDTH * 0.32, GAME_WIDTH * 0.5, GAME_WIDTH * 0.68]
 
     if (this.laneSwitchCooldown <= 0 && Phaser.Input.Keyboard.JustDown(this.keys.LEFT)) {
       this.laneIndex = Math.max(0, this.laneIndex - 1)
-      this.laneSwitchCooldown = 0.12
+      this.laneSwitchCooldown = tuning?.laneSwitchCooldown ?? 0.12
     }
     if (this.laneSwitchCooldown <= 0 && Phaser.Input.Keyboard.JustDown(this.keys.RIGHT)) {
       this.laneIndex = Math.min(2, this.laneIndex + 1)
-      this.laneSwitchCooldown = 0.12
+      this.laneSwitchCooldown = tuning?.laneSwitchCooldown ?? 0.12
     }
 
     this.player.x = Phaser.Math.Linear(this.player.x, lanes[this.laneIndex], 0.24)
 
-    if (this.spawnAccumulator >= 0.55) {
+    if (this.spawnAccumulator >= (tuning?.laneSpawnInterval ?? 0.55)) {
       this.spawnAccumulator = 0
       this.spawnLaneWave()
     }
 
-    const moveSpeed = 290 + this.score * 1.4
+    const moveSpeed = (tuning?.laneMoveSpeedBase ?? 290) + this.score * (tuning?.laneMoveSpeedScoreFactor ?? 1.4)
     for (const item of [...this.laneObjects]) {
       item.shape.y += moveSpeed * delta
 
@@ -733,11 +741,11 @@ class GeneratedGameScene extends Phaser.Scene {
 
       if (Phaser.Math.Distance.Between(item.shape.x, item.shape.y, this.player.x, this.player.y) < 28) {
         if (item.kind === 'pickup') {
-          this.addScore(3)
+          this.addScore(tuning?.lanePickupScore ?? 3)
           this.bumpCombo()
           this.cameras.main.flash(120, 102, 210, 199, false)
         } else {
-          this.health -= 18
+          this.health -= tuning?.laneHazardDamage ?? 18
           this.combo = 1
           this.comboTimer = 0
           this.cameras.main.shake(90, 0.005)
@@ -757,10 +765,10 @@ class GeneratedGameScene extends Phaser.Scene {
       this.blueprint.winCondition,
     ])
 
-    for (let i = 0; i < 8; i += 1) {
+    for (const position of getRelicHuntLayout(this.blueprint.gameTypeKit, GAME_WIDTH, GAME_HEIGHT)) {
       const relic = this.add.circle(
-        Phaser.Math.Between(100, GAME_WIDTH - 100),
-        Phaser.Math.Between(120, GAME_HEIGHT - 80),
+        position.x,
+        position.y,
         8,
         parseColor(this.blueprint.palette.accentAlt),
       )
@@ -772,27 +780,34 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private updateRelicHunt(delta: number): void {
+    const tuning = this.gameTypeDefinition.tuning
     this.movePlayerFree(delta)
 
-    if (this.spawnAccumulator >= 1.35 && this.enemies.length < 10) {
+    if (
+      this.spawnAccumulator >= (tuning?.enemySpawnInterval ?? 1.35) &&
+      this.enemies.length < (tuning?.relicEnemyCap ?? 10)
+    ) {
       this.spawnAccumulator = 0
-      this.spawnEnemyAtEdge(96)
+      this.spawnEnemyAtEdge(tuning?.enemyBaseSpeed ?? 96)
     }
 
     this.handleCombatInput()
     this.updateProjectiles(delta)
-    this.updateChasingEnemies(delta, 0.8)
+    this.updateChasingEnemies(delta, tuning?.chaseMultiplier ?? 0.8)
 
     for (const relic of [...this.shards]) {
       if (!this.player) {
         continue
       }
 
-      if (Phaser.Math.Distance.Between(relic.shape.x, relic.shape.y, this.player.x, this.player.y) < 24) {
+      if (
+        Phaser.Math.Distance.Between(relic.shape.x, relic.shape.y, this.player.x, this.player.y) <
+        (tuning?.relicCollectRadius ?? 24)
+      ) {
         relic.shape.destroy()
         this.shards.splice(this.shards.indexOf(relic), 1)
         this.relicsRemaining -= 1
-        this.addScore(8)
+        this.addScore(tuning?.relicPickupScore ?? 8)
         this.bumpCombo()
         this.cameras.main.flash(160, 243, 185, 95, false)
       }
@@ -813,27 +828,25 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
+    const course = getPlatformerCourse(this.blueprint.gameTypeKit, GAME_HEIGHT)
     this.player.setPosition(120, GAME_HEIGHT - 118)
     this.objectiveText.setText([
       `${this.blueprint.hero.name}: ${this.blueprint.noveltyHook}`,
       this.blueprint.winCondition,
     ])
 
-    this.addPlatform(GAME_WIDTH / 2, GAME_HEIGHT - 36, GAME_WIDTH, 72)
-    this.addPlatform(190, 380, 180, 18)
-    this.addPlatform(430, 320, 160, 18)
-    this.addPlatform(650, 270, 180, 18)
-    this.addPlatform(840, 210, 160, 18)
+    for (const platform of course.platforms) {
+      this.addPlatform(platform.x, platform.y, platform.width, platform.height)
+    }
 
-    this.spawnRelic(190, 350)
-    this.spawnRelic(430, 290)
-    this.spawnRelic(650, 240)
-    this.spawnRelic(840, 180)
+    for (const relic of course.relics) {
+      this.spawnRelic(relic.x, relic.y)
+    }
     this.relicsRemaining = this.shards.length
 
-    this.spawnPatroller(310, GAME_HEIGHT - 94, 220, 440)
-    this.spawnPatroller(620, GAME_HEIGHT - 94, 520, 780)
-    this.spawnPatroller(700, 236, 580, 860)
+    for (const patroller of course.patrollers) {
+      this.spawnPatroller(patroller.x, patroller.y, patroller.minX, patroller.maxX)
+    }
   }
 
   private updatePlatformerExpedition(delta: number): void {
@@ -1077,7 +1090,7 @@ class GeneratedGameScene extends Phaser.Scene {
 
     let vx = 0
     let vy = 0
-    const speed = 230
+    const speed = this.gameTypeDefinition.tuning?.topDownPlayerSpeed ?? 230
 
     if (this.keys.W.isDown || this.keys.UP.isDown) vy -= 1
     if (this.keys.S.isDown || this.keys.DOWN.isDown) vy += 1
@@ -1098,8 +1111,9 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    const moveSpeed = 240
+    const moveSpeed = this.gameTypeDefinition.tuning?.platformerMoveSpeed ?? 240
     const gravity = 880 * this.blueprint.physics.gravity
+    const jumpVelocity = this.gameTypeDefinition.tuning?.platformerJumpVelocity ?? 420
     let inputX = 0
 
     if (this.keys.A.isDown || this.keys.LEFT.isDown) {
@@ -1117,7 +1131,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.playerVelocity.y += gravity * delta
 
     if (this.onGround && (Phaser.Input.Keyboard.JustDown(this.keys.W) || Phaser.Input.Keyboard.JustDown(this.keys.UP))) {
-      this.playerVelocity.y = -420
+      this.playerVelocity.y = -jumpVelocity
       this.onGround = false
     }
 
@@ -1154,7 +1168,10 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    if (this.blueprint.systems.combat === 'auto-shoot' && this.shotAccumulator >= 0.5) {
+    if (
+      this.blueprint.systems.combat === 'auto-shoot' &&
+      this.shotAccumulator >= (this.gameTypeDefinition.tuning?.autoShootInterval ?? 0.5)
+    ) {
       this.shotAccumulator = 0
       this.fireAtNearestEnemy()
     }
@@ -1224,7 +1241,13 @@ class GeneratedGameScene extends Phaser.Scene {
   private spawnPatroller(x: number, y: number, minX: number, maxX: number): void {
     const enemy = this.add.rectangle(x, y, 24, 20, parseColor(this.blueprint.palette.danger))
     enemy.setStrokeStyle(2, parseColor(this.blueprint.palette.text), 0.35)
-    this.enemies.push({ shape: enemy, vx: 90, vy: 0, minX, maxX })
+    this.enemies.push({
+      shape: enemy,
+      vx: this.gameTypeDefinition.tuning?.platformerPatrolSpeed ?? 90,
+      vy: 0,
+      minX,
+      maxX,
+    })
   }
 
   private fireAtNearestEnemy(): void {
@@ -1355,6 +1378,7 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
+    const patrolDamage = this.gameTypeDefinition.tuning?.platformerPatrolDamage ?? 12
     for (const enemy of [...this.enemies]) {
       enemy.shape.x += enemy.vx * delta
 
@@ -1366,7 +1390,7 @@ class GeneratedGameScene extends Phaser.Scene {
       }
 
       if (aabbOverlap(this.player, this.playerHalfWidth, this.playerHalfHeight, enemy.shape, 12, 10)) {
-        this.health -= 12
+        this.health -= patrolDamage
         this.combo = 1
         this.comboTimer = 0
         this.player.y -= 18
@@ -1450,18 +1474,33 @@ class GeneratedGameScene extends Phaser.Scene {
     const lanes = [GAME_WIDTH * 0.32, GAME_WIDTH * 0.5, GAME_WIDTH * 0.68]
     const hazardLane = Phaser.Math.Between(0, 2)
     const pickupLane = (hazardLane + Phaser.Math.Between(1, 2)) % 3
+    const spareLane = [0, 1, 2].find((index) => index !== hazardLane && index !== pickupLane) ?? hazardLane
+    const pattern = this.gameTypeDefinition.tuning?.lanePattern ?? 'balanced'
 
-    const hazard = this.add.rectangle(
-      lanes[hazardLane],
-      -30,
-      54,
-      26,
-      parseColor(this.blueprint.palette.danger),
-      0.95,
-    )
-    const pickup = this.add.circle(lanes[pickupLane], -66, 12, parseColor(this.blueprint.palette.accentAlt))
+    this.spawnLaneHazard(lanes[hazardLane], -30, 54, 26)
 
+    if (pattern === 'pickup-rich') {
+      this.spawnLanePickup(lanes[pickupLane], -66, 12)
+      this.spawnLanePickup(lanes[spareLane], -112, 10)
+      return
+    }
+
+    if (pattern === 'hazard-heavy') {
+      this.spawnLaneHazard(lanes[spareLane], -84, 46, 24)
+      this.spawnLanePickup(lanes[pickupLane], -138, 11)
+      return
+    }
+
+    this.spawnLanePickup(lanes[pickupLane], -66, 12)
+  }
+
+  private spawnLaneHazard(x: number, y: number, width: number, height: number): void {
+    const hazard = this.add.rectangle(x, y, width, height, parseColor(this.blueprint.palette.danger), 0.95)
     this.laneObjects.push({ shape: hazard, vx: 0, vy: 0, kind: 'hazard' })
+  }
+
+  private spawnLanePickup(x: number, y: number, radius: number): void {
+    const pickup = this.add.circle(x, y, radius, parseColor(this.blueprint.palette.accentAlt))
     this.laneObjects.push({ shape: pickup, vx: 0, vy: 0, kind: 'pickup' })
   }
 

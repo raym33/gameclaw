@@ -4,6 +4,8 @@ Gameclaw composes systems into stable runtime profiles. Prefer adapting one of t
 
 The goal is not to cover every genre immediately. The goal is to map a request to the fastest stable runtime that can still deliver a premium-feeling slice.
 
+Inside each runtime family, Gameclaw can now choose a narrower executable game type kit. Use runtime profiles for the big execution decision and game type kits for the more specific product shape.
+
 ## Profiles
 
 - `arena-survivor`: top-down movement, enemy pressure, projectiles or pulse combat.
@@ -43,9 +45,11 @@ Defined in `shared/game.ts`:
 ## Implementation Map
 
 - Schema/types/labels: `shared/game.ts`
+- Game type kit catalog: `shared/gameTypeKits.ts`
 - Normalization/fallbacks: `server/blueprint.ts`
 - AI prompt and backend parsing: `server/openai.ts`
 - Runtime execution: `src/game/createGame.ts`
+- Runtime stage layouts: `src/game/gameTypeStageLayouts.ts`
 - Curated Astral Orchard data: `server/demo.ts`
 
 ## Adding A Runtime

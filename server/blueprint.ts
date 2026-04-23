@@ -18,6 +18,13 @@ import {
   type SpecialMechanic,
   type SupportLevel,
 } from '../shared/game'
+import {
+  GAME_TYPE_KITS,
+  getGameTypeKit,
+  inferGameTypeKit,
+  resolveGameTypeKit,
+  type GameTypeKitId,
+} from '../shared/gameTypeKits'
 
 const MOVEMENT_SYSTEMS = ['free-8dir', 'lane-switch', 'platformer', 'slingshot'] as const
 const HEX_COLOR = /^#(?:[0-9a-f]{3}){1,2}$/i
@@ -55,6 +62,10 @@ export const GAME_BLUEPRINT_JSON_SCHEMA = {
   properties: {
     title: { type: 'string', minLength: 1, maxLength: 80 },
     tagline: { type: 'string', minLength: 1, maxLength: 160 },
+    gameTypeKit: {
+      type: 'string',
+      enum: GAME_TYPE_KITS.map((kit) => kit.id),
+    },
     supportLevel: {
       type: 'string',
       enum: ['native', 'hybrid', 'approximate'],
@@ -174,9 +185,12 @@ export function normalizeBlueprint(
 ): GameBlueprint {
   const raw = isRecord(input) ? input : {}
   const title = stringOrFallback(raw.title, buildTitle(options.notes, options.fileNames))
-  const inferredProfile = inferRuntimeProfileFromText(`${title} ${options.notes}`)
-  const systems = normalizeSystems(raw.systems, `${title} ${options.notes}`, inferredProfile)
+  const hint = `${title} ${raw.genre ?? ''} ${raw.noveltyHook ?? ''} ${options.notes}`.trim()
+  const inferredProfile = inferRuntimeProfileFromText(hint)
+  const provisionalGameTypeKit = normalizeGameTypeKit(raw.gameTypeKit, hint, inferredProfile)
+  const systems = normalizeSystems(raw.systems, hint, inferredProfile, provisionalGameTypeKit)
   const runtimeProfile = deriveProfileFromSystems(systems)
+  const gameTypeKit = normalizeGameTypeKit(raw.gameTypeKit, hint, runtimeProfile)
   const supportLevel = normalizeSupportLevel(
     raw.supportLevel,
     `${options.notes} ${raw.noveltyHook ?? ''}`,
@@ -193,11 +207,12 @@ export function normalizeBlueprint(
       'Upload messy references, ship a stable vertical slice.',
     ),
     runtimeProfile,
+    gameTypeKit,
     supportLevel,
-    genre: stringOrFallback(raw.genre, defaultGenre(runtimeProfile)),
+    genre: stringOrFallback(raw.genre, defaultGenre(runtimeProfile, gameTypeKit)),
     playerFantasy: stringOrFallback(
       raw.playerFantasy,
-      'Pilot the strongest part of the idea before the full production pipeline exists.',
+      defaultPlayerFantasy(runtimeProfile, gameTypeKit),
     ),
     worldSummary: stringOrFallback(
       raw.worldSummary,
@@ -210,17 +225,17 @@ export function normalizeBlueprint(
     audioMood: stringOrFallback(raw.audioMood, 'Punchy arcade rhythm with handmade texture.'),
     noveltyHook: stringOrFallback(
       raw.noveltyHook,
-      defaultNoveltyHook(runtimeProfile, options.notes),
+      defaultNoveltyHook(runtimeProfile, gameTypeKit, options.notes),
     ),
     approximationStrategy: stringOrFallback(
       raw.approximationStrategy,
       defaultApproximationStrategy(runtimeProfile, supportLevel, systems.specialMechanic),
     ),
     controlNotes: listOrFallback(raw.controlNotes, defaultControlNotes(runtimeProfile, systems)),
-    coreLoop: listOrFallback(raw.coreLoop, defaultLoop(runtimeProfile)),
+    coreLoop: listOrFallback(raw.coreLoop, defaultLoop(runtimeProfile, gameTypeKit)),
     mechanicHighlights: listOrFallback(
       raw.mechanicHighlights,
-      defaultMechanics(runtimeProfile, systems),
+      defaultMechanics(runtimeProfile, systems, gameTypeKit),
     ),
     implementationNotes: listOrFallback(
       raw.implementationNotes,
@@ -230,14 +245,14 @@ export function normalizeBlueprint(
       raw.productionBacklog,
       defaultProductionBacklog(runtimeProfile, systems, supportLevel),
     ),
-    levelMoments: listOrFallback(raw.levelMoments, defaultMoments(runtimeProfile)),
+    levelMoments: listOrFallback(raw.levelMoments, defaultMoments(runtimeProfile, gameTypeKit)),
     assetPrompts: listOrFallback(raw.assetPrompts, defaultAssetPrompts(title, runtimeProfile)),
     imageInsights: listOrFallback(
       raw.imageInsights,
       buildInsights(options.fileNames, options.notes),
     ),
-    winCondition: stringOrFallback(raw.winCondition, defaultWinCondition(runtimeProfile)),
-    loseCondition: stringOrFallback(raw.loseCondition, defaultLoseCondition(runtimeProfile)),
+    winCondition: stringOrFallback(raw.winCondition, defaultWinCondition(runtimeProfile, gameTypeKit)),
+    loseCondition: stringOrFallback(raw.loseCondition, defaultLoseCondition(runtimeProfile, gameTypeKit)),
     palette: normalizePalette(raw.palette),
     systems,
     physics: normalizePhysics(raw.physics, runtimeProfile),
@@ -253,14 +268,16 @@ export function buildFallbackBlueprint(
   sourceImageCount: number,
 ): GameBlueprint {
   const inferredProfile = inferRuntimeProfileFromText(notes)
+  const gameTypeKit = normalizeGameTypeKit(undefined, notes, inferredProfile)
   const specialMechanic = inferSpecialMechanic(notes, inferredProfile)
   const supportLevel = inferSupportLevel(notes, inferredProfile, specialMechanic)
 
   return normalizeBlueprint(
     {
       title: buildTitle(notes, fileNames),
+      gameTypeKit,
       supportLevel,
-      noveltyHook: defaultNoveltyHook(inferredProfile, notes),
+      noveltyHook: defaultNoveltyHook(inferredProfile, gameTypeKit, notes),
       approximationStrategy: defaultApproximationStrategy(
         inferredProfile,
         supportLevel,
@@ -270,7 +287,7 @@ export function buildFallbackBlueprint(
         ...defaultsForProfile(inferredProfile),
         specialMechanic,
       },
-      genre: defaultGenre(inferredProfile),
+      genre: defaultGenre(inferredProfile, gameTypeKit),
       worldSummary: summarizeNotes(notes, fileNames),
       visualStyle: 'Sketch-driven shapes, cinematic gradients, and readable arcade contrast.',
       audioMood: 'Hybrid of crunchy arcade rhythm and moody ambient pads.',
@@ -307,10 +324,12 @@ function normalizeSystems(
   value: unknown,
   hint: string,
   inferredProfile: RuntimeProfile,
+  gameTypeKitId: GameTypeKitId,
 ): GameSystems {
   const raw = isRecord(value) ? value : {}
   const preferredProfile = inferProfileFromRaw(raw, hint, inferredProfile)
   const defaults = defaultsForProfile(preferredProfile)
+  const gameTypeKit = getGameTypeKit(gameTypeKitId)
 
   if (preferredProfile === 'slingshot-destruction') {
     return {
@@ -331,14 +350,18 @@ function normalizeSystems(
       camera: 'side-view',
       movement: 'platformer',
       physics: 'scripted-arcade',
-      combat: enumOrFallback(raw.combat, COMBAT_SYSTEMS, 'projectile-shot'),
+      combat: enumOrFallback(
+        raw.combat,
+        COMBAT_SYSTEMS,
+        gameTypeKit.preferredSystems?.combat ?? 'projectile-shot',
+      ),
       objective: enumOrFallback(raw.objective, OBJECTIVE_TYPES, 'collect'),
       worldLayout: 'platform-route',
       specialMechanic: normalizeSpecial(
         raw.specialMechanic,
         preferredProfile,
         hint,
-        defaults.specialMechanic,
+        gameTypeKit.preferredSystems?.specialMechanic ?? defaults.specialMechanic,
       ),
     }
   }
@@ -355,7 +378,7 @@ function normalizeSystems(
         raw.specialMechanic,
         preferredProfile,
         hint,
-        defaults.specialMechanic,
+        gameTypeKit.preferredSystems?.specialMechanic ?? defaults.specialMechanic,
       ),
     }
   }
@@ -365,14 +388,18 @@ function normalizeSystems(
       camera: 'top-down',
       movement: 'free-8dir',
       physics: 'scripted-arcade',
-      combat: enumOrFallback(raw.combat, COMBAT_SYSTEMS, 'pulse-burst'),
+      combat: enumOrFallback(
+        raw.combat,
+        COMBAT_SYSTEMS,
+        gameTypeKit.preferredSystems?.combat ?? 'pulse-burst',
+      ),
       objective: 'collect',
       worldLayout: 'relic-field',
       specialMechanic: normalizeSpecial(
         raw.specialMechanic,
         preferredProfile,
         hint,
-        defaults.specialMechanic,
+        gameTypeKit.preferredSystems?.specialMechanic ?? defaults.specialMechanic,
       ),
     }
   }
@@ -381,16 +408,30 @@ function normalizeSystems(
     camera: 'top-down',
     movement: 'free-8dir',
     physics: 'scripted-arcade',
-    combat: enumOrFallback(raw.combat, COMBAT_SYSTEMS, 'auto-shoot'),
+    combat: enumOrFallback(
+      raw.combat,
+      COMBAT_SYSTEMS,
+      gameTypeKit.preferredSystems?.combat ?? 'auto-shoot',
+    ),
     objective: 'survive',
     worldLayout: 'arena',
     specialMechanic: normalizeSpecial(
       raw.specialMechanic,
       preferredProfile,
       hint,
-      defaults.specialMechanic,
+      gameTypeKit.preferredSystems?.specialMechanic ?? defaults.specialMechanic,
     ),
   }
+}
+
+function normalizeGameTypeKit(
+  value: unknown,
+  hint: string,
+  runtimeProfile: RuntimeProfile,
+): GameTypeKitId {
+  const rawValue = typeof value === 'string' ? value : null
+  const inferred = inferGameTypeKit(hint, runtimeProfile)
+  return resolveGameTypeKit(rawValue ?? inferred, runtimeProfile)
 }
 
 function normalizeSpecial(
@@ -659,7 +700,12 @@ function defaultEnemies(profile: RuntimeProfile): GameCharacter[] {
   }
 }
 
-function defaultGenre(profile: RuntimeProfile): string {
+function defaultGenre(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
+  const kit = getGameTypeKit(gameTypeKit)
+  if (kit.runtimeProfile === profile) {
+    return kit.genreLabel
+  }
+
   switch (profile) {
     case 'slingshot-destruction':
       return 'Physics destruction prototype'
@@ -674,9 +720,46 @@ function defaultGenre(profile: RuntimeProfile): string {
   }
 }
 
-function defaultNoveltyHook(profile: RuntimeProfile, notes: string): string {
+function defaultPlayerFantasy(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
+  switch (gameTypeKit) {
+    case 'spell-swarm-survivor':
+      return 'Skate the arena edge, keep the cast cadence alive, and turn pressure into flow.'
+    case 'orbital-defense-survivor':
+      return 'Guard a fragile core and push back encroaching waves with cleaner defensive timing.'
+    case 'courier-sprint-runner':
+      return 'Cut through a high-risk route like a courier who cannot afford to drop the streak.'
+    case 'hazard-rush-runner':
+      return 'Survive a harsher dodge gauntlet where every lane choice commits you.'
+    case 'maze-relic-scavenger':
+      return 'Sweep a relic field efficiently and stay one step ahead of the closing hunt.'
+    case 'pressure-relic-hunt':
+      return 'Snatch objectives under pressure while the map gets less safe by the second.'
+    case 'precision-climb-platformer':
+      return 'Trust exact jumps, tiny recoveries, and route memory more than combat power.'
+    case 'combat-gauntlet-platformer':
+      return 'Drive forward through patrols and ranged pressure without losing movement flow.'
+    case 'chain-reaction-siege':
+      return 'Read weak points fast and turn one clean shot into a full collapse.'
+    default:
+      if (profile === 'platformer-expedition') {
+        return 'Cross a hostile route while keeping jump rhythm and recovery under control.'
+      }
+      return 'Pilot the strongest part of the idea before the full production pipeline exists.'
+  }
+}
+
+function defaultNoveltyHook(
+  profile: RuntimeProfile,
+  gameTypeKit: GameTypeKitId,
+  notes: string,
+): string {
   if (notes.trim()) {
     return notes.trim().slice(0, 160)
+  }
+
+  const kit = getGameTypeKit(gameTypeKit)
+  if (kit.runtimeProfile === profile) {
+    return kit.summary
   }
 
   switch (profile) {
@@ -751,7 +834,30 @@ function defaultControlNotes(profile: RuntimeProfile, systems: GameSystems): str
   ]
 }
 
-function defaultLoop(profile: RuntimeProfile): string[] {
+function defaultLoop(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string[] {
+  switch (gameTypeKit) {
+    case 'spell-swarm-survivor':
+      return ['Strafe the swarm edge', 'Keep spells cycling', 'Vacuum shards before the arena closes in']
+    case 'orbital-defense-survivor':
+      return ['Hold center space', 'Burst back pressure', 'Stabilize the arena between wave spikes']
+    case 'courier-sprint-runner':
+      return ['Read the route', 'Snap into the clean lane', 'Chain route markers through the finish']
+    case 'hazard-rush-runner':
+      return ['Commit early', 'Thread the hazard wall', 'Recover with rewind before the next pattern lands']
+    case 'maze-relic-scavenger':
+      return ['Route the field', 'Collect corner relics', 'Escape pressure with efficient pivots']
+    case 'pressure-relic-hunt':
+      return ['Grab the nearest safe relic', 'Pulse for breathing room', 'Commit to the last pickup before the hunters close']
+    case 'precision-climb-platformer':
+      return ['Read the next landing', 'Chain exact jumps', 'Convert a near miss into a clean recovery']
+    case 'combat-gauntlet-platformer':
+      return ['Push into the next platform pocket', 'Fire through patrol pressure', 'Clear the gauntlet without losing pace']
+    case 'chain-reaction-siege':
+      return ['Read the weak point', 'Spend one precise shot', 'Let the structure fail for you']
+    default:
+      break
+  }
+
   switch (profile) {
     case 'slingshot-destruction':
       return ['Read the structure', 'Pull back and fire', 'Collapse defenses and clear targets']
@@ -766,9 +872,26 @@ function defaultLoop(profile: RuntimeProfile): string[] {
   }
 }
 
-function defaultMechanics(profile: RuntimeProfile, systems: GameSystems): string[] {
+function defaultMechanics(
+  profile: RuntimeProfile,
+  systems: GameSystems,
+  gameTypeKit: GameTypeKitId,
+): string[] {
+  const gameTypeBase: Partial<Record<GameTypeKitId, string[]>> = {
+    'spell-swarm-survivor': ['Auto-cast cadence', 'Dense kiting routes', 'Reward vacuum timing'],
+    'orbital-defense-survivor': ['Defensive pulse spacing', 'Wave reset windows', 'Safer inner-ring control'],
+    'courier-sprint-runner': ['Fast lane snaps', 'Pickup chain routing', 'Short-risk recovery windows'],
+    'hazard-rush-runner': ['Hazard wall reads', 'Commit-heavy swaps', 'Rewind bailout timing'],
+    'maze-relic-scavenger': ['Field routing', 'Collection efficiency', 'Map-edge awareness'],
+    'pressure-relic-hunt': ['Pursuit pressure', 'Emergency pulse space', 'High-value relic decisions'],
+    'precision-climb-platformer': ['Exact jump timing', 'Landing recovery', 'Vertical route reading'],
+    'combat-gauntlet-platformer': ['Forward firing lanes', 'Patrol spacing', 'Combat while moving'],
+    'chain-reaction-siege': ['Elastic launch arc', 'Weak-point reading', 'Rigid-body chain reactions'],
+  }
+
   const base =
-    profile === 'slingshot-destruction'
+    gameTypeBase[gameTypeKit] ??
+    (profile === 'slingshot-destruction'
       ? ['Elastic launch arc', 'Rigid-body collapse', 'Target elimination through chain reactions']
       : profile === 'platformer-expedition'
         ? ['Jump timing', 'Route pressure', 'Mid-air correction']
@@ -776,7 +899,7 @@ function defaultMechanics(profile: RuntimeProfile, systems: GameSystems): string
           ? ['Three-lane routing', 'Hazard reads', 'Pickup combo pacing']
           : profile === 'relic-hunt'
             ? ['Top-down collection', 'Close-range panic button', 'Hunter pressure']
-            : ['Auto-pressure combat', 'Space control', 'Wave escalation']
+            : ['Auto-pressure combat', 'Space control', 'Wave escalation'])
 
   if (systems.specialMechanic === 'rewind-dash') {
     base.push('Short-range rewind recovery')
@@ -848,7 +971,30 @@ function defaultProductionBacklog(
   return backlog.slice(0, 6)
 }
 
-function defaultMoments(profile: RuntimeProfile): string[] {
+function defaultMoments(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string[] {
+  switch (gameTypeKit) {
+    case 'spell-swarm-survivor':
+      return ['First clean kite circle', 'Wave density spike', 'Shard vacuum recovery after near collapse']
+    case 'orbital-defense-survivor':
+      return ['First defensive burst', 'Inner-ring hold under pressure', 'Last-second arena stabilization']
+    case 'courier-sprint-runner':
+      return ['First pickup streak', 'Mid-route traffic knot', 'Final courier sprint with a live combo']
+    case 'hazard-rush-runner':
+      return ['Opening hazard wall', 'Tight rewind save', 'Final gauntlet lane commit']
+    case 'maze-relic-scavenger':
+      return ['First corner relic', 'Route cross under pressure', 'Last map sweep with one hunter behind']
+    case 'pressure-relic-hunt':
+      return ['Safe relic opening', 'Pulse through a collapse', 'Final objective snatch under pursuit']
+    case 'precision-climb-platformer':
+      return ['First exact ledge catch', 'Vertical jump chain', 'Final recovery jump before the goal']
+    case 'combat-gauntlet-platformer':
+      return ['Opening patrol clear', 'Crossfire platform pocket', 'Final aggressive push through the exit']
+    case 'chain-reaction-siege':
+      return ['First clean support hit', 'Partial collapse and target exposure', 'Final delayed chain reaction']
+    default:
+      break
+  }
+
   switch (profile) {
     case 'slingshot-destruction':
       return ['First calibrated shot', 'Partial collapse and target exposure', 'Last-shot chain reaction']
@@ -871,7 +1017,24 @@ function defaultAssetPrompts(title: string, profile: RuntimeProfile): string[] {
   ]
 }
 
-function defaultWinCondition(profile: RuntimeProfile): string {
+function defaultWinCondition(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
+  switch (gameTypeKit) {
+    case 'courier-sprint-runner':
+      return 'Finish the route alive while collecting enough route markers to validate the delivery.'
+    case 'hazard-rush-runner':
+      return 'Reach the end of the gauntlet without losing the run to back-to-back hazard reads.'
+    case 'maze-relic-scavenger':
+      return 'Clear the relic field before the hunt compresses the map into a trap.'
+    case 'precision-climb-platformer':
+      return 'Secure the climb relics and finish the ascent without dropping the route.'
+    case 'combat-gauntlet-platformer':
+      return 'Break through the patrol route and secure the exit collectibles alive.'
+    case 'chain-reaction-siege':
+      return 'Collapse every defended target before the shot reserve is exhausted.'
+    default:
+      break
+  }
+
   switch (profile) {
     case 'slingshot-destruction':
       return 'Destroy every target inside the structure before you run out of shots.'
@@ -886,7 +1049,24 @@ function defaultWinCondition(profile: RuntimeProfile): string {
   }
 }
 
-function defaultLoseCondition(profile: RuntimeProfile): string {
+function defaultLoseCondition(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
+  switch (gameTypeKit) {
+    case 'courier-sprint-runner':
+      return 'Lose the courier route to collisions before the finish sequence resolves.'
+    case 'hazard-rush-runner':
+      return 'Get clipped too often and the gauntlet collapses the run.'
+    case 'maze-relic-scavenger':
+      return 'Let the relic sweep stall until the hunters pin you in a dead route.'
+    case 'precision-climb-platformer':
+      return 'Miss the climb too often and the ascent breaks apart.'
+    case 'combat-gauntlet-platformer':
+      return 'Take too much patrol pressure before the route is cleared.'
+    case 'chain-reaction-siege':
+      return 'Spend every shot before the structure gives up its targets.'
+    default:
+      break
+  }
+
   switch (profile) {
     case 'slingshot-destruction':
       return 'Run out of shots before the structure gives up its targets.'
