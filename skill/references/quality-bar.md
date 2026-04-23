@@ -13,6 +13,8 @@ Unless the user explicitly asks for a raw prototype, aim for a **premium vertica
 
 Do not spread effort across menus, lore, multiple unfinished modes, or broad architecture before the slice feels good.
 
+If the user asks for app-store-like quality, push beyond “premium” into a commercial-looking slice: denser detail, stronger presentation surfaces, and a screen that can survive promotional use.
+
 ## Non-Negotiables
 
 - The game must be readable in motion, not only in screenshots.
@@ -21,6 +23,7 @@ Do not spread effort across menus, lore, multiple unfinished modes, or broad arc
 - Physics-based mechanics must be deterministic enough to learn.
 - Sprite scale, anchoring, and hit feedback must look intentional.
 - Asset coverage must be sufficient for the loop. One pretty image and one gameplay sprite is not enough if motion still reads badly.
+- The main playable screen must look filled on purpose, not sparsely assembled from a few nice assets.
 - HUD and helper text must support the loop instead of covering the action.
 - If the user asks for polished or sellable quality, do not leave placeholder primitives in the final presentation layer.
 
@@ -45,6 +48,7 @@ Do not spread effort across menus, lore, multiple unfinished modes, or broad arc
 - friction, gravity, or drag values that feel arbitrary
 - unreadable or oversized debug-style HUD
 - generated art exists but is not actually integrated into the gameplay layer
+- attractive individual assets but no store-worthy full screen composition
 - too many systems, none of them tuned
 
 Fix those before adding more features.

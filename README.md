@@ -6,6 +6,8 @@ Upload sketches, sprite sheets, screenshots, handwritten notes or moodboards. Ga
 
 The goal is not “any game”. The goal is getting to a small game that already feels intentional: coherent art direction, clean controls, reliable physics, readable motion, and enough final art coverage that the slice does not look like a prototype.
 
+If the target is “like the games people buy on app stores”, Gameclaw should push toward that too: more detailed screens, stronger visual hierarchy, richer props and effects, and a playable slice that can survive screenshots and short trailer clips.
+
 ## What This Repo Is
 
 - A browser game generator built around stable runtime profiles.
@@ -31,6 +33,7 @@ The system favors stable playable slices over pretending it can generate any ful
 - Add more sprites when motion reads badly.
 - Keep trajectory previews, collisions, and launches on the same motion model.
 - Treat game feel and visual integration as implementation work, not polish-afterthoughts.
+- For commercial-looking output, push detail density on the main screen instead of stopping at a technically correct prototype.
 
 ## Stack
 
@@ -117,7 +120,7 @@ Example prompt:
 Use $gameclaw to turn these sketches, sprites and notes into a polished playable browser vertical slice with professional movement, sprites, physics, and all missing images generated and integrated.
 ```
 
-The skill teaches Codex how to work with this repo, including runtime profiles, local AI backends, Phaser/Matter validation, sprite fidelity, asset coverage, and the quality bar for movement and physics.
+The skill teaches Codex how to work with this repo, including runtime profiles, local AI backends, Phaser/Matter validation, sprite fidelity, asset coverage, app-store-style presentation, and the quality bar for movement and physics.
 
 Install from the repo root:
 

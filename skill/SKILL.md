@@ -10,6 +10,7 @@ Use this skill to get from messy references to a small game that already feels i
 The point of this skill is speed with quality. If using `$gameclaw` does not help Codex reach a stronger playable slice faster than an unstructured workflow, the skill is failing.
 
 For polished or sellable requests, Codex must treat art production as core implementation work. Missing or weak visuals are not an excuse to ship primitives, mismatched crops, or thin animation coverage.
+For app-store-style requests, aim for a commercial-looking slice: detailed screens, cohesive asset families, readable moment-to-moment feedback, and enough finish that the first minute could plausibly belong on a store page.
 
 ## Start Here
 
@@ -25,6 +26,7 @@ For polished or sellable requests, Codex must treat art production as core imple
 4. Choose the target output:
    - **Playable slice**: fast, stable, readable.
    - **Premium slice**: default when the user asks for polished, smooth, sellable, professional, studio-quality, or pixel-perfect results.
+   - **Commercial-looking slice**: use when the user wants the result to resemble games sold on app stores, with denser visuals, stronger presentation, and more detail in the playable screen.
 5. Implement the smallest stable playable slice first, then reserve time for feel and polish. Do not generate broad, unbounded game architecture.
 6. Validate with `npm run lint` and `npm run build` unless the change is documentation-only.
 
@@ -37,6 +39,7 @@ For polished or sellable requests, Codex must treat art production as core imple
 - Keep visuals honest: use user-provided, curated, or generated raster sprites before procedural placeholders when visual fidelity matters.
 - For polished or sellable output, generate and integrate the full minimum image set needed for the loop to feel professional: character states, gameplay props, projectiles, impacts, and presentation surfaces.
 - Do not ration image generation effort when missing art is the reason the slice still looks cheap or moves badly.
+- If the user wants an app-store-quality result, push detail density: layered backgrounds, richer props, better UI surfaces, stronger effects, and more complete animation coverage in the main loop.
 - Do not use procedural character rigs unless the user explicitly requests them.
 - If motion reads badly because sprite coverage is too thin, add or regenerate sprites instead of tweening incompatible poses.
 - Do not stop at “it compiles.” Movement, collisions, timing, trajectory preview, camera, and animation readability must all be checked.
@@ -71,6 +74,7 @@ Load only what is needed:
 - For runtime/profile decisions, read [runtime-profiles.md](references/runtime-profiles.md).
 - For production standards and what “good enough” means, read [quality-bar.md](references/quality-bar.md).
 - For minimum final asset coverage and when to generate more art, read [asset-coverage.md](references/asset-coverage.md).
+- For store-facing visual density and commercial presentation, read [app-store-quality.md](references/app-store-quality.md).
 - For movement, camera, input, and physics feel, read [game-feel.md](references/game-feel.md).
 - For Ollama, LM Studio, OpenAI-compatible setup, read [local-ai.md](references/local-ai.md).
 - For sprites, cutouts, animation, and Astral Orchard visual rules, read [visual-fidelity.md](references/visual-fidelity.md).
@@ -111,6 +115,7 @@ http://localhost:3001/?demo=astral-orchard
 - Sprite, camera, and physics changes are visually checked, not only type-checked.
 - The asset set is complete enough that the core loop no longer depends on placeholder presentation.
 - Frequently seen character states have dedicated sprites instead of one pose stretched across the whole loop.
+- If the target is commercial-looking, the main playable screen has enough visual density and finish to survive a store-page screenshot or short trailer clip.
 - Mouse, keyboard, and drag-release edge cases are checked if the game depends on them.
 - Trajectory preview matches real launch behavior when a projectile mechanic exists.
 - There are no placeholder circles/rectangles left in a slice that is supposed to look polished.

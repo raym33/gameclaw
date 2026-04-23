@@ -2,7 +2,7 @@ interface:
   display_name: "Gameclaw"
   short_description: "Game references to polished slices with full asset coverage"
   brand_color: "#F3BF63"
-  default_prompt: "Use $gameclaw to turn my sketches, sprites, notes, and mechanics into a polished playable browser vertical slice. Generate and integrate every missing image, sprite sheet, prop, and effect needed for professional movement, visuals, and physics."
+  default_prompt: "Use $gameclaw to turn my sketches, sprites, notes, and mechanics into a polished playable browser vertical slice. Generate and integrate every missing image, sprite sheet, prop, effect, and presentation surface needed for professional movement, visuals, physics, and app-store-quality detail."
 
 policy:
   allow_implicit_invocation: true
