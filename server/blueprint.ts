@@ -627,6 +627,15 @@ function defaultPhysics(profile: RuntimeProfile): PhysicsTuning {
 }
 
 function defaultHero(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): GameCharacter {
+  if (gameTypeKit === 'guided-task-simulation') {
+    return {
+      name: 'Task Guide',
+      role: 'learning lead',
+      description: 'A clear-headed guide who turns real-world procedures into short playable routines.',
+      abilities: ['Step chain', 'Safe routing', 'Task memory'],
+    }
+  }
+
   if (gameTypeKit === 'learning-relic-quest') {
     return {
       name: 'Archive Runner',
@@ -671,6 +680,17 @@ function defaultHero(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): GameC
 }
 
 function defaultEnemies(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): GameCharacter[] {
+  if (gameTypeKit === 'guided-task-simulation') {
+    return [
+      {
+        name: 'Rush Glitch',
+        role: 'distraction',
+        description: 'A soft-pressure distraction that punishes skipped steps and messy routes.',
+        abilities: ['Distract', 'Crowd stations'],
+      },
+    ]
+  }
+
   if (gameTypeKit === 'learning-relic-quest') {
     return [
       {
@@ -746,6 +766,8 @@ function defaultGenre(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): stri
 
 function defaultPlayerFantasy(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
   switch (gameTypeKit) {
+    case 'guided-task-simulation':
+      return 'Move between stations, complete a short chain of practical tasks, and finish the route without losing the flow of the procedure.'
     case 'learning-relic-quest':
       return 'Move through a knowledge trail, recover key facts under light pressure, and keep a mastery streak alive.'
     case 'spell-swarm-survivor':
@@ -823,6 +845,14 @@ function defaultControlNotes(
   systems: GameSystems,
   gameTypeKit: GameTypeKitId,
 ): string[] {
+  if (gameTypeKit === 'guided-task-simulation') {
+    return [
+      'Move with WASD or arrow keys',
+      'Visit the marked task stations and complete the route in order',
+      'Keep your task streak alive while avoiding distractions',
+    ]
+  }
+
   if (gameTypeKit === 'learning-relic-quest') {
     return [
       'Move with WASD or arrow keys',
@@ -874,6 +904,8 @@ function defaultControlNotes(
 
 function defaultLoop(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string[] {
   switch (gameTypeKit) {
+    case 'guided-task-simulation':
+      return ['Move to the next task station', 'Complete the step cleanly', 'Finish the full route with your task streak intact']
     case 'learning-relic-quest':
       return ['Follow the learning trail', 'Collect the correct knowledge markers', 'Finish the route with your mastery streak intact']
     case 'spell-swarm-survivor':
@@ -918,6 +950,7 @@ function defaultMechanics(
   gameTypeKit: GameTypeKitId,
 ): string[] {
   const gameTypeBase: Partial<Record<GameTypeKitId, string[]>> = {
+    'guided-task-simulation': ['Task station chaining', 'Step-order memory', 'Low-pressure route management'],
     'learning-relic-quest': ['Knowledge marker collection', 'Mastery streak loop', 'Low-pressure pursuit'],
     'spell-swarm-survivor': ['Auto-cast cadence', 'Dense kiting routes', 'Reward vacuum timing'],
     'orbital-defense-survivor': ['Defensive pulse spacing', 'Wave reset windows', 'Safer inner-ring control'],
@@ -957,6 +990,20 @@ function defaultImplementationNotes(
   systems: GameSystems,
   gameTypeKit: GameTypeKitId,
 ): string[] {
+  if (gameTypeKit === 'guided-task-simulation') {
+    const notes = [
+      'Treat pickups as task stations or procedure steps first and collectibles second: seeds, signs, ingredients, tools, or checkpoints should be legible in the world.',
+      'Keep the central character and station layout readable so the player always knows what to do next.',
+      'Use enemy pressure as soft disruption, not as the main fantasy. The task flow should stay primary.',
+    ]
+
+    if (systems.specialMechanic === 'combo-chain') {
+      notes.push('Map combo language to task streaks, clean execution, or procedure confidence instead of combat framing.')
+    }
+
+    return notes.slice(0, 6)
+  }
+
   if (gameTypeKit === 'learning-relic-quest') {
     const notes = [
       'Treat collectibles as lesson content surfaces first and pickups second: terms, symbols, vocabulary, or steps should be readable on-screen.',
@@ -1015,6 +1062,11 @@ function defaultProductionBacklog(
     'Add progression, onboarding, and clearer fail-state messaging.',
   ]
 
+  if (gameTypeKit === 'guided-task-simulation') {
+    backlog.push('Replace generic pickups with real task stations, step states, and world props for the chosen domain.')
+    backlog.push('Add result summaries, streak-safe retries, and clearer chapter progression between task routes.')
+  }
+
   if (gameTypeKit === 'learning-relic-quest') {
     backlog.push('Replace generic pickups with a real lesson content pack, mastery tiers, and topic unlock flow.')
     backlog.push('Add progress summaries, streak-safe retries, and educator-friendly result screens.')
@@ -1038,6 +1090,8 @@ function defaultProductionBacklog(
 
 function defaultMoments(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string[] {
   switch (gameTypeKit) {
+    case 'guided-task-simulation':
+      return ['First station completed cleanly', 'Mid-route distraction while the chain is live', 'Final multi-step task clear']
     case 'learning-relic-quest':
       return ['First concept chain', 'Mid-route distraction spike', 'Final mastery pickup under light pressure']
     case 'spell-swarm-survivor':
@@ -1086,6 +1140,8 @@ function defaultAssetPrompts(title: string, profile: RuntimeProfile): string[] {
 
 function defaultWinCondition(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
   switch (gameTypeKit) {
+    case 'guided-task-simulation':
+      return 'Complete every task station on the route before the distraction pressure breaks the sequence.'
     case 'learning-relic-quest':
       return 'Recover every knowledge marker on the route before the distraction pressure breaks the run.'
     case 'courier-sprint-runner':
@@ -1120,6 +1176,8 @@ function defaultWinCondition(profile: RuntimeProfile, gameTypeKit: GameTypeKitId
 
 function defaultLoseCondition(profile: RuntimeProfile, gameTypeKit: GameTypeKitId): string {
   switch (gameTypeKit) {
+    case 'guided-task-simulation':
+      return 'Let the task route fall apart before the final step chain is complete.'
     case 'learning-relic-quest':
       return 'Let the route collapse into confusion before the final concept chain is secured.'
     case 'courier-sprint-runner':

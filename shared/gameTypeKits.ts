@@ -19,7 +19,7 @@ type GameTypeKitTuning = {
   relicEnemyCap?: number
   relicCollectRadius?: number
   relicPickupScore?: number
-  relicLayout?: 'scatter-ring' | 'maze-ribbon' | 'pressure-clusters' | 'knowledge-path'
+  relicLayout?: 'scatter-ring' | 'maze-ribbon' | 'pressure-clusters' | 'knowledge-path' | 'task-route'
   platformerMoveSpeed?: number
   platformerJumpVelocity?: number
   platformerPatrolSpeed?: number
@@ -218,6 +218,58 @@ export const GAME_TYPE_KITS = [
       relicCollectRadius: 28,
       relicPickupScore: 12,
       relicLayout: 'knowledge-path',
+    },
+  },
+  {
+    id: 'guided-task-simulation',
+    label: 'Guided Task Simulation',
+    runtimeProfile: 'relic-hunt',
+    genreLabel: 'Educational task simulation',
+    summary: 'Guide a central character between stations, complete a short task chain, and learn by doing with light pressure and readable world props.',
+    keywords: [
+      'task',
+      'tasks',
+      'chores',
+      'simulation',
+      'simulator',
+      'simular',
+      'garden',
+      'orchard',
+      'farm',
+      'huerto',
+      'granja',
+      'traffic',
+      'traffic rules',
+      'road safety',
+      'trafico',
+      'semaforo',
+      'seguridad vial',
+      'cook',
+      'cooking',
+      'kitchen',
+      'recipe',
+      'ingredients',
+      'cocinar',
+      'cocina',
+      'receta',
+      'ingredientes',
+      'training',
+      'practice',
+      'workshop',
+    ],
+    preferredSystems: {
+      combat: 'none',
+      specialMechanic: 'combo-chain',
+    },
+    tuning: {
+      topDownPlayerSpeed: 208,
+      enemySpawnInterval: 2.2,
+      enemyBaseSpeed: 64,
+      chaseMultiplier: 0.62,
+      relicEnemyCap: 4,
+      relicCollectRadius: 30,
+      relicPickupScore: 14,
+      relicLayout: 'task-route',
     },
   },
   {

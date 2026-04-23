@@ -25,6 +25,7 @@ This is the safest default because it supports:
 
 ## When To Switch
 
+- Use `guided-task-simulation` with `skill/assets/templates/task-based-education-sim.json` when the user wants a character completing practical tasks in a garden, kitchen, traffic route, workshop, or similar world.
 - Use `courier-sprint-runner` when the ask is about rapid drills, timed review, or streak pressure.
 - Use `precision-climb-platformer` when the ask is about mastery ladders, chapter climbing, or progressive skill gates.
 - Stay honest if the request really needs quizzes, branching dialogue, dashboards, multiplayer classrooms, or assessment exports. Those are broader product systems, not just feel tuning.

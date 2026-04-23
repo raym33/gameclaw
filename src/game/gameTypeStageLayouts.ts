@@ -31,6 +31,19 @@ export function getRelicHuntLayout(
   gameHeight: number,
 ): StagePoint[] {
   switch (gameTypeKit) {
+    case 'guided-task-simulation':
+      return [
+        { x: 142, y: 126 },
+        { x: 284, y: 126 },
+        { x: 436, y: 146 },
+        { x: 612, y: 124 },
+        { x: 786, y: 142 },
+        { x: 796, y: 282 },
+        { x: 662, y: 350 },
+        { x: 494, y: 372 },
+        { x: 320, y: 336 },
+        { x: 178, y: 266 },
+      ]
     case 'learning-relic-quest':
       return [
         { x: 150, y: 122 },

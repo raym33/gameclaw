@@ -1,0 +1,76 @@
+{
+  "template": "task-based-education-sim",
+  "targetSlice": "premium",
+  "goal": "Turn a practical learning brief such as tending a garden, following traffic rules, cooking with ingredients, or another learn-by-doing routine into a polished browser slice with a central character, clear stations, short task chains, and classroom-friendly progression.",
+  "primaryMapping": {
+    "runtimeProfile": "relic-hunt",
+    "gameTypeKit": "guided-task-simulation",
+    "useWhen": "The user wants one character moving through a world and completing practical steps across stations, props, or checkpoints."
+  },
+  "alternativeMappings": [
+    {
+      "runtimeProfile": "relic-hunt",
+      "gameTypeKit": "learning-relic-quest",
+      "useWhen": "The ask is more about collecting concepts, labels, or facts than completing procedures."
+    },
+    {
+      "runtimeProfile": "lane-runner",
+      "gameTypeKit": "courier-sprint-runner",
+      "useWhen": "The brief is about route discipline, traffic timing, or rapid-response rule drills rather than free movement between stations."
+    }
+  ],
+  "sessionDesign": {
+    "lessonUnit": "One short procedure per slice",
+    "sessionLength": "60 to 180 seconds per run",
+    "difficultyCurve": "Start with one or two steps, then add interruption, timing, or order pressure",
+    "failureModel": "Soft retry with visible progress and low humiliation"
+  },
+  "taskLoop": {
+    "core": [
+      "Move to the next station",
+      "Perform the step or collect the required element",
+      "Complete the route cleanly before distractions break the flow"
+    ],
+    "goodDomains": [
+      "garden or orchard care",
+      "traffic rules and road safety",
+      "cooking and ingredient order",
+      "cleaning, assembly, or workshop routines",
+      "health, safety, or onboarding procedures"
+    ],
+    "rewardSystems": [
+      "task streak",
+      "clean completion bonus",
+      "chapter medal",
+      "topic unlock"
+    ]
+  },
+  "contentRules": [
+    "Every station should communicate a real step, tool, sign, or ingredient from the chosen domain.",
+    "The player should understand what to do next from the world itself, not only from side text.",
+    "Keep mistakes recoverable and readable instead of treating the player like they failed an exam."
+  ],
+  "artDirection": {
+    "look": "warm, clear, inviting, prop-rich, low-clutter, with obvious station silhouettes",
+    "ui": "task list, progress meter, and streak feedback should feel product-ready but never block the play space",
+    "fx": "small confirmations for completed steps, stronger payoff at the end of the route"
+  },
+  "assetShotList": [
+    "central character idle, move, interact, and celebrate family",
+    "station family for the chosen domain",
+    "tool, sign, ingredient, or task item family",
+    "soft distraction or hazard family",
+    "task checklist, streak meter, and chapter clear surfaces",
+    "completion burst, fail-soft, and retry feedback"
+  ],
+  "playtestFocus": [
+    "can the player infer the next task from the world",
+    "does the route feel like a real game rather than a worksheet",
+    "are stations and props readable at a glance",
+    "does the central character feel smooth enough to carry repeated runs"
+  ],
+  "approximationNotes": [
+    "Do not fake a full simulator. Keep the first slice to one practical routine with strong readability.",
+    "If the user wants deep systemic simulation, teacher dashboards, or branching evaluation, scope that honestly as backlog."
+  ]
+}
