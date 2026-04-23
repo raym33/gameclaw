@@ -28,6 +28,14 @@ const GAME_WIDTH = 960
 const GAME_HEIGHT = 540
 
 type ShapeObject = Phaser.GameObjects.Shape
+type RuntimeVisualVariant =
+  | 'enemy-chaser'
+  | 'enemy-patroller'
+  | 'projectile'
+  | 'shard'
+  | 'relic'
+  | 'lane-hazard'
+  | 'lane-pickup'
 
 type MovingShape = {
   shape: ShapeObject
@@ -35,6 +43,9 @@ type MovingShape = {
   vy: number
   minX?: number
   maxX?: number
+  art?: Phaser.GameObjects.Image
+  shadow?: Phaser.GameObjects.Ellipse
+  variant?: RuntimeVisualVariant
 }
 
 type LaneObject = MovingShape & {
@@ -47,6 +58,8 @@ type PlatformData = {
   y: number
   width: number
   height: number
+  art?: Phaser.GameObjects.Image
+  shadow?: Phaser.GameObjects.Ellipse
 }
 
 type MatterShape = ShapeObject & {
@@ -117,6 +130,28 @@ type TextureCrop = {
   width: number
   height: number
 }
+
+const RUNTIME_TEXTURE_SUFFIXES = {
+  heroTopIdle: 'hero-top-idle',
+  heroTopStepA: 'hero-top-step-a',
+  heroTopStepB: 'hero-top-step-b',
+  heroRunnerStepA: 'hero-runner-step-a',
+  heroRunnerStepB: 'hero-runner-step-b',
+  heroSideIdle: 'hero-side-idle',
+  heroSideRunA: 'hero-side-run-a',
+  heroSideRunB: 'hero-side-run-b',
+  heroSideJump: 'hero-side-jump',
+  enemyChaserA: 'enemy-chaser-a',
+  enemyChaserB: 'enemy-chaser-b',
+  enemyPatrollerA: 'enemy-patroller-a',
+  enemyPatrollerB: 'enemy-patroller-b',
+  projectile: 'projectile',
+  shard: 'shard',
+  relic: 'relic',
+  laneHazard: 'lane-hazard',
+  lanePickup: 'lane-pickup',
+  platform: 'platform',
+} as const
 
 type SlingshotMaterial = 'wood' | 'glass' | 'brass'
 
@@ -363,8 +398,12 @@ class GeneratedGameScene extends Phaser.Scene {
   private readonly runtimeProfile: RuntimeProfile
   private readonly runtimeTemplate: RuntimeSceneTemplate
   private readonly gameTypeDefinition: GameTypeKit
+  private readonly runtimeTexturePrefix: string
+  private readonly runtimeTextureKeys: string[] = []
   private keys?: Record<string, Phaser.Input.Keyboard.Key>
   private player?: ShapeObject
+  private playerArt?: Phaser.GameObjects.Image
+  private playerShadow?: Phaser.GameObjects.Ellipse
   private playerHalfWidth = 14
   private playerHalfHeight = 14
   private readonly playerVelocity = new Phaser.Math.Vector2()
@@ -401,6 +440,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.runtimeProfile = runtimeProfile
     this.runtimeTemplate = getRuntimeSceneTemplate(runtimeProfile)
     this.gameTypeDefinition = getGameTypeKit(blueprint.gameTypeKit)
+    this.runtimeTexturePrefix = `runtime-${runtimeProfile}-${blueprint.slug}-${Math.random().toString(36).slice(2, 8)}`
   }
 
   preload(): void {
@@ -423,6 +463,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.timeLeft = this.runtimeTemplate.timerSeconds
 
     this.prepareAstralCutoutTextures()
+    this.prepareRuntimeTextures()
     this.drawBackdrop(this.blueprint.palette)
     this.createHud()
     this.createControls()
@@ -480,6 +521,11 @@ class GeneratedGameScene extends Phaser.Scene {
       if (this.runtimeProfile === 'slingshot-destruction') {
         this.matter.world.off('collisionstart', this.handleSlingshotCollision, this)
       }
+      for (const key of this.runtimeTextureKeys) {
+        if (this.textures.exists(key)) {
+          this.textures.remove(key)
+        }
+      }
     })
   }
 
@@ -526,6 +572,7 @@ class GeneratedGameScene extends Phaser.Scene {
         break
     }
 
+    this.syncRuntimePresentation()
     this.refreshHud()
   }
 
@@ -542,6 +589,8 @@ class GeneratedGameScene extends Phaser.Scene {
 
   private resetSessionState(): void {
     this.player = undefined
+    this.playerArt = undefined
+    this.playerShadow = undefined
     this.playerVelocity.set(0, 0)
     this.playerHistory.length = 0
     this.enemies.length = 0
@@ -591,6 +640,112 @@ class GeneratedGameScene extends Phaser.Scene {
     this.supportText = hud.supportText
   }
 
+  private prepareRuntimeTextures(): void {
+    if (this.runtimeProfile === 'slingshot-destruction') {
+      return
+    }
+
+    const palette = this.blueprint.palette
+
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroTopIdle), 72, 72, (graphics) => {
+      this.drawTopHeroTexture(graphics, palette, 0, 0)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroTopStepA), 72, 72, (graphics) => {
+      this.drawTopHeroTexture(graphics, palette, -5, -0.16)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroTopStepB), 72, 72, (graphics) => {
+      this.drawTopHeroTexture(graphics, palette, 5, 0.16)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroRunnerStepA), 76, 84, (graphics) => {
+      this.drawRunnerHeroTexture(graphics, palette, -1)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroRunnerStepB), 76, 84, (graphics) => {
+      this.drawRunnerHeroTexture(graphics, palette, 1)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroSideIdle), 72, 84, (graphics) => {
+      this.drawSideHeroTexture(graphics, palette, 'idle')
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroSideRunA), 72, 84, (graphics) => {
+      this.drawSideHeroTexture(graphics, palette, 'run-a')
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroSideRunB), 72, 84, (graphics) => {
+      this.drawSideHeroTexture(graphics, palette, 'run-b')
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroSideJump), 72, 84, (graphics) => {
+      this.drawSideHeroTexture(graphics, palette, 'jump')
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.enemyChaserA), 52, 52, (graphics) => {
+      this.drawChaserEnemyTexture(graphics, palette, -1)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.enemyChaserB), 52, 52, (graphics) => {
+      this.drawChaserEnemyTexture(graphics, palette, 1)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.enemyPatrollerA), 64, 44, (graphics) => {
+      this.drawPatrollerTexture(graphics, palette, -1)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.enemyPatrollerB), 64, 44, (graphics) => {
+      this.drawPatrollerTexture(graphics, palette, 1)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.projectile), 28, 28, (graphics) => {
+      this.drawProjectileTexture(graphics, palette)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.shard), 24, 24, (graphics) => {
+      this.drawShardTexture(graphics, palette)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.relic), 32, 42, (graphics) => {
+      this.drawRelicTexture(graphics, palette)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.laneHazard), 128, 56, (graphics) => {
+      this.drawLaneHazardTexture(graphics, palette)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.lanePickup), 40, 40, (graphics) => {
+      this.drawLanePickupTexture(graphics, palette)
+    })
+    this.generateRuntimeTexture(this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.platform), 240, 72, (graphics) => {
+      this.drawPlatformTexture(graphics, palette)
+    })
+  }
+
+  private runtimeTextureKey(suffix: string): string {
+    return `${this.runtimeTexturePrefix}-${suffix}`
+  }
+
+  private generateRuntimeTexture(
+    key: string,
+    width: number,
+    height: number,
+    draw: (graphics: Phaser.GameObjects.Graphics) => void,
+  ): void {
+    if (this.textures.exists(key)) {
+      return
+    }
+
+    const graphics = this.make.graphics({ x: 0, y: 0, add: false })
+    draw(graphics)
+    graphics.generateTexture(key, width, height)
+    graphics.destroy()
+    this.runtimeTextureKeys.push(key)
+  }
+
+  private createAttachedRuntimeArt(
+    textureKey: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    depth: number,
+    shadowWidth: number,
+    shadowHeight: number,
+    shadowAlpha = 0.18,
+  ): { art: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse } {
+    const shadow = this.add
+      .ellipse(x, y + height * 0.32, shadowWidth, shadowHeight, 0x02070d, shadowAlpha)
+      .setDepth(depth - 1)
+    const art = this.add.image(x, y, textureKey).setDisplaySize(width, height).setDepth(depth)
+
+    return { art, shadow }
+  }
+
   private drawBackdrop(palette: GamePalette): void {
     if (this.runtimeProfile === 'slingshot-destruction') {
       this.drawAstralBackdrop(palette)
@@ -598,15 +753,73 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     const graphics = this.add.graphics()
-    graphics.fillStyle(parseColor(palette.bg), 1)
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
+    const bg = parseColor(palette.bg)
+    const surface = parseColor(palette.surface)
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
 
-    graphics.fillStyle(parseColor(palette.surface), 0.45)
-    for (let i = 0; i < 9; i += 1) {
-      graphics.fillRoundedRect(70 + i * 90, 40 + (i % 2) * 36, 120, 340, 18)
+    for (let i = 0; i < 18; i += 1) {
+      const t = i / 17
+      graphics.fillStyle(mixColors(bg, surface, 0.08 + t * 0.36), 1)
+      graphics.fillRect(0, (GAME_HEIGHT / 18) * i, GAME_WIDTH, GAME_HEIGHT / 18 + 2)
     }
 
-    graphics.lineStyle(1, parseColor(palette.accentAlt), 0.12)
+    graphics.fillStyle(accent, 0.11)
+    graphics.fillCircle(150, 110, 96)
+    graphics.fillStyle(accentAlt, 0.09)
+    graphics.fillCircle(GAME_WIDTH - 180, 96, 84)
+
+    for (let i = 0; i < 26; i += 1) {
+      graphics.fillStyle(i % 4 === 0 ? accentAlt : accent, 0.04 + (i % 3) * 0.012)
+      graphics.fillCircle(30 + i * 36, 58 + (i % 5) * 18, 2 + (i % 2))
+    }
+
+    switch (this.runtimeProfile) {
+      case 'lane-runner':
+        graphics.fillStyle(shadeColor(surface, 0.08), 0.86)
+        graphics.fillTriangle(220, GAME_HEIGHT, 740, GAME_HEIGHT, 480, 136)
+        graphics.fillStyle(shadeColor(surface, -0.04), 0.92)
+        graphics.fillTriangle(310, GAME_HEIGHT, 650, GAME_HEIGHT, 480, 176)
+        graphics.lineStyle(4, accentAlt, 0.3)
+        graphics.lineBetween(398, GAME_HEIGHT, 474, 172)
+        graphics.lineBetween(562, GAME_HEIGHT, 486, 172)
+        graphics.lineStyle(2, accent, 0.22)
+        for (let y = 0; y < 6; y += 1) {
+          graphics.lineBetween(450 + y * 4, GAME_HEIGHT - y * 82, 470 + y * 2, GAME_HEIGHT - y * 98)
+          graphics.lineBetween(510 - y * 4, GAME_HEIGHT - y * 82, 490 - y * 2, GAME_HEIGHT - y * 98)
+        }
+        break
+      case 'platformer-expedition':
+        graphics.fillStyle(shadeColor(surface, -0.08), 0.38)
+        graphics.fillEllipse(180, 380, 340, 130)
+        graphics.fillEllipse(480, 340, 420, 120)
+        graphics.fillEllipse(810, 360, 320, 118)
+        graphics.fillStyle(accentAlt, 0.08)
+        for (let i = 0; i < 5; i += 1) {
+          graphics.fillEllipse(120 + i * 190, 120 + (i % 2) * 22, 140, 38)
+        }
+        break
+      case 'relic-hunt':
+        graphics.fillStyle(shadeColor(surface, -0.04), 0.22)
+        graphics.fillCircle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.56, 170)
+        graphics.lineStyle(2, accentAlt, 0.22)
+        graphics.strokeCircle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.56, 144)
+        graphics.strokeCircle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.56, 104)
+        break
+      default:
+        graphics.fillStyle(shadeColor(surface, -0.06), 0.2)
+        graphics.fillCircle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.56, 168)
+        graphics.lineStyle(2, accent, 0.12)
+        graphics.strokeCircle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.56, 196)
+        break
+    }
+
+    graphics.fillStyle(surface, 0.18)
+    for (let i = 0; i < 8; i += 1) {
+      graphics.fillRoundedRect(48 + i * 116, 36 + (i % 2) * 26, 140, 278, 22)
+    }
+
+    graphics.lineStyle(1, accentAlt, 0.08)
     for (let x = 0; x <= GAME_WIDTH; x += 48) {
       graphics.lineBetween(x, 0, x, GAME_HEIGHT)
     }
@@ -615,10 +828,262 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     if (this.runtimeProfile === 'platformer-expedition' || this.runtimeProfile === 'slingshot-destruction') {
-      graphics.fillStyle(parseColor(palette.surface), 0.8)
+      graphics.fillStyle(surface, 0.84)
       graphics.fillRect(0, GAME_HEIGHT - 72, GAME_WIDTH, 72)
-      graphics.lineStyle(3, parseColor(palette.accent), 0.25)
+      graphics.lineStyle(3, accent, 0.22)
       graphics.lineBetween(0, GAME_HEIGHT - 72, GAME_WIDTH, GAME_HEIGHT - 72)
+    }
+  }
+
+  private drawTopHeroTexture(
+    graphics: Phaser.GameObjects.Graphics,
+    palette: GamePalette,
+    strideOffset: number,
+    lean: number,
+  ): void {
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
+    const surface = parseColor(palette.surface)
+    const text = parseColor(palette.text)
+    const bodyX = 36 + lean * 6
+    const cloakY = 34 + Math.abs(strideOffset) * 0.22
+
+    graphics.fillStyle(accentAlt, 0.12)
+    graphics.fillCircle(36, 36, 22)
+    graphics.fillStyle(shadeColor(surface, -0.16), 0.98)
+    graphics.fillTriangle(36, 16, 16 + lean * 4, 48, 56 + lean * 4, 48)
+    graphics.fillStyle(accent, 0.98)
+    graphics.fillCircle(bodyX, cloakY, 15)
+    graphics.fillStyle(shadeColor(accentAlt, -0.08), 1)
+    graphics.fillEllipse(bodyX, 33, 18, 22)
+    graphics.fillStyle(shadeColor(surface, 0.2), 0.98)
+    graphics.fillEllipse(bodyX - lean * 2, 25, 16, 14)
+    graphics.fillStyle(text, 0.92)
+    graphics.fillCircle(bodyX - 4 + lean * 2, 25, 1.8)
+    graphics.fillCircle(bodyX + 4 + lean * 2, 25, 1.8)
+    graphics.lineStyle(3, text, 0.82)
+    graphics.lineBetween(24, 46, 19 + strideOffset * 0.36, 56)
+    graphics.lineBetween(48, 46, 53 - strideOffset * 0.36, 56)
+    graphics.lineStyle(2, accentAlt, 0.74)
+    graphics.lineBetween(24, 36, 15 + strideOffset * 0.24, 42)
+    graphics.lineBetween(48, 36, 57 - strideOffset * 0.24, 42)
+  }
+
+  private drawRunnerHeroTexture(
+    graphics: Phaser.GameObjects.Graphics,
+    palette: GamePalette,
+    stride: -1 | 1,
+  ): void {
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
+    const surface = parseColor(palette.surface)
+    const text = parseColor(palette.text)
+
+    graphics.fillStyle(accentAlt, 0.12)
+    graphics.fillCircle(38, 44, 26)
+    graphics.fillStyle(shadeColor(surface, 0.16), 1)
+    graphics.fillEllipse(38, 20, 18, 16)
+    graphics.fillStyle(shadeColor(accent, -0.08), 1)
+    graphics.fillRoundedRect(24, 28, 28, 26, 12)
+    graphics.fillStyle(accentAlt, 0.98)
+    graphics.fillTriangle(38, 26, 22, 42, 54, 42)
+    graphics.fillStyle(text, 0.9)
+    graphics.fillCircle(34, 20, 1.8)
+    graphics.fillCircle(42, 20, 1.8)
+    graphics.lineStyle(6, shadeColor(surface, -0.18), 0.98)
+    graphics.lineBetween(28, 52, 24 - stride * 4, 68)
+    graphics.lineBetween(48, 52, 52 + stride * 4, 68)
+    graphics.lineStyle(5, shadeColor(accent, 0.14), 0.94)
+    graphics.lineBetween(26, 34, 16 - stride * 3, 46)
+    graphics.lineBetween(50, 34, 60 + stride * 3, 46)
+    graphics.fillStyle(accent, 0.98)
+    graphics.fillTriangle(38, 18, 28, 9, 48, 9)
+  }
+
+  private drawSideHeroTexture(
+    graphics: Phaser.GameObjects.Graphics,
+    palette: GamePalette,
+    pose: 'idle' | 'run-a' | 'run-b' | 'jump',
+  ): void {
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
+    const surface = parseColor(palette.surface)
+    const text = parseColor(palette.text)
+    const runPhase = pose === 'run-a' ? -1 : pose === 'run-b' ? 1 : 0
+    const jumpLift = pose === 'jump' ? -8 : 0
+
+    graphics.fillStyle(accentAlt, 0.08)
+    graphics.fillEllipse(34, 54 + jumpLift, 26, 10)
+    graphics.fillStyle(shadeColor(surface, 0.16), 1)
+    graphics.fillEllipse(36, 18 + jumpLift, 18, 16)
+    graphics.fillStyle(text, 0.88)
+    graphics.fillCircle(40, 18 + jumpLift, 1.7)
+    graphics.fillStyle(shadeColor(accent, -0.08), 1)
+    graphics.fillRoundedRect(24, 28 + jumpLift, 22, 24, 10)
+    graphics.fillStyle(accentAlt, 0.96)
+    graphics.fillTriangle(24, 32 + jumpLift, 12, 48 + jumpLift, 32, 40 + jumpLift)
+    graphics.lineStyle(5, shadeColor(surface, -0.16), 0.98)
+    if (pose === 'jump') {
+      graphics.lineBetween(28, 52 + jumpLift, 20, 66 + jumpLift)
+      graphics.lineBetween(40, 52 + jumpLift, 46, 66 + jumpLift)
+    } else {
+      graphics.lineBetween(28, 52 + jumpLift, 22 - runPhase * 4, 68)
+      graphics.lineBetween(40, 52 + jumpLift, 44 + runPhase * 4, 68)
+    }
+    graphics.lineStyle(4, shadeColor(accent, 0.16), 0.94)
+    graphics.lineBetween(28, 34 + jumpLift, 18 - runPhase * 2, 44 + jumpLift)
+    graphics.lineBetween(42, 34 + jumpLift, 48 + runPhase * 3, 40 + jumpLift)
+    graphics.fillStyle(accent, 0.94)
+    graphics.fillTriangle(38, 18 + jumpLift, 30, 10 + jumpLift, 48, 13 + jumpLift)
+  }
+
+  private drawChaserEnemyTexture(
+    graphics: Phaser.GameObjects.Graphics,
+    palette: GamePalette,
+    phase: -1 | 1,
+  ): void {
+    const danger = parseColor(this.blueprint.palette.danger)
+    const accentAlt = parseColor(palette.accentAlt)
+    const text = parseColor(palette.text)
+    const centerX = 26
+    const centerY = 26
+
+    graphics.fillStyle(accentAlt, 0.1)
+    graphics.fillCircle(centerX, centerY, 18)
+    for (let i = 0; i < 6; i += 1) {
+      const angle = (Math.PI * 2 * i) / 6 + phase * 0.12
+      const spikeX = centerX + Math.cos(angle) * 18
+      const spikeY = centerY + Math.sin(angle) * 18
+      graphics.fillStyle(shadeColor(danger, i % 2 === 0 ? -0.12 : 0.08), 0.96)
+      graphics.fillTriangle(
+        centerX + Math.cos(angle - 0.34) * 11,
+        centerY + Math.sin(angle - 0.34) * 11,
+        spikeX,
+        spikeY,
+        centerX + Math.cos(angle + 0.34) * 11,
+        centerY + Math.sin(angle + 0.34) * 11,
+      )
+    }
+    graphics.fillStyle(danger, 1)
+    graphics.fillCircle(centerX, centerY, 13)
+    graphics.fillStyle(text, 0.9)
+    graphics.fillCircle(centerX - 4, centerY - 2, 1.8)
+    graphics.fillCircle(centerX + 4, centerY - 2, 1.8)
+  }
+
+  private drawPatrollerTexture(
+    graphics: Phaser.GameObjects.Graphics,
+    palette: GamePalette,
+    wingTilt: -1 | 1,
+  ): void {
+    const danger = parseColor(this.blueprint.palette.danger)
+    const accentAlt = parseColor(palette.accentAlt)
+    const text = parseColor(palette.text)
+
+    graphics.fillStyle(accentAlt, 0.08)
+    graphics.fillEllipse(32, 30, 36, 12)
+    graphics.fillStyle(shadeColor(danger, -0.08), 1)
+    graphics.fillRoundedRect(18, 14, 28, 16, 7)
+    graphics.fillStyle(accentAlt, 0.78)
+    graphics.fillTriangle(18, 22, 8, 16 + wingTilt * 3, 16, 28)
+    graphics.fillTriangle(46, 22, 56, 16 - wingTilt * 3, 48, 28)
+    graphics.lineStyle(4, shadeColor(danger, 0.14), 0.94)
+    graphics.lineBetween(22, 30, 18 - wingTilt * 2, 38)
+    graphics.lineBetween(42, 30, 46 + wingTilt * 2, 38)
+    graphics.fillStyle(text, 0.9)
+    graphics.fillCircle(27, 21, 1.7)
+    graphics.fillCircle(37, 21, 1.7)
+  }
+
+  private drawProjectileTexture(graphics: Phaser.GameObjects.Graphics, palette: GamePalette): void {
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
+
+    graphics.fillStyle(accentAlt, 0.12)
+    graphics.fillCircle(14, 14, 12)
+    graphics.fillStyle(shadeColor(accentAlt, -0.04), 0.9)
+    graphics.fillTriangle(6, 14, 2, 22, 18, 18)
+    graphics.fillStyle(accent, 1)
+    graphics.fillCircle(15, 13, 7)
+    graphics.fillStyle(0xffffff, 0.68)
+    graphics.fillCircle(17, 11, 2.5)
+  }
+
+  private drawShardTexture(graphics: Phaser.GameObjects.Graphics, palette: GamePalette): void {
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
+
+    graphics.fillStyle(accentAlt, 0.14)
+    graphics.fillCircle(12, 12, 10)
+    graphics.fillStyle(accent, 0.98)
+    graphics.fillTriangle(12, 2, 22, 12, 12, 22)
+    graphics.fillTriangle(12, 2, 2, 12, 12, 22)
+    graphics.fillStyle(0xffffff, 0.42)
+    graphics.fillTriangle(12, 4, 17, 11, 12, 12)
+  }
+
+  private drawRelicTexture(graphics: Phaser.GameObjects.Graphics, palette: GamePalette): void {
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
+    const surface = parseColor(palette.surface)
+
+    graphics.fillStyle(accentAlt, 0.1)
+    graphics.fillCircle(16, 18, 14)
+    graphics.fillStyle(shadeColor(surface, -0.14), 0.96)
+    graphics.fillRoundedRect(8, 18, 16, 18, 6)
+    graphics.fillStyle(accent, 1)
+    graphics.fillTriangle(16, 2, 26, 18, 16, 30)
+    graphics.fillTriangle(16, 2, 6, 18, 16, 30)
+    graphics.fillStyle(0xffffff, 0.46)
+    graphics.fillTriangle(16, 6, 20, 16, 16, 18)
+  }
+
+  private drawLaneHazardTexture(graphics: Phaser.GameObjects.Graphics, palette: GamePalette): void {
+    const danger = parseColor(this.blueprint.palette.danger)
+    const text = parseColor(palette.text)
+    const accentAlt = parseColor(palette.accentAlt)
+
+    graphics.fillStyle(shadeColor(danger, -0.12), 0.98)
+    graphics.fillRoundedRect(10, 8, 108, 40, 14)
+    graphics.fillStyle(accentAlt, 0.24)
+    graphics.fillRoundedRect(16, 14, 96, 12, 6)
+    graphics.lineStyle(6, text, 0.84)
+    graphics.lineBetween(20, 40, 40, 16)
+    graphics.lineBetween(44, 40, 64, 16)
+    graphics.lineBetween(68, 40, 88, 16)
+    graphics.lineBetween(92, 40, 112, 16)
+  }
+
+  private drawLanePickupTexture(graphics: Phaser.GameObjects.Graphics, palette: GamePalette): void {
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
+
+    graphics.fillStyle(accentAlt, 0.12)
+    graphics.fillCircle(20, 20, 18)
+    graphics.fillStyle(accent, 1)
+    graphics.fillCircle(20, 20, 11)
+    graphics.fillStyle(0xffffff, 0.64)
+    graphics.fillEllipse(16, 16, 8, 5)
+    graphics.lineStyle(2, accentAlt, 0.8)
+    graphics.strokeCircle(20, 20, 14)
+  }
+
+  private drawPlatformTexture(graphics: Phaser.GameObjects.Graphics, palette: GamePalette): void {
+    const surface = parseColor(palette.surface)
+    const accent = parseColor(palette.accent)
+    const accentAlt = parseColor(palette.accentAlt)
+
+    graphics.fillStyle(shadeColor(surface, -0.08), 1)
+    graphics.fillRoundedRect(0, 16, 240, 34, 14)
+    graphics.fillStyle(shadeColor(surface, 0.12), 1)
+    graphics.fillRoundedRect(6, 8, 228, 16, 10)
+    graphics.fillStyle(accentAlt, 0.24)
+    graphics.fillRoundedRect(14, 12, 212, 8, 4)
+    graphics.lineStyle(4, accent, 0.24)
+    graphics.lineBetween(18, 38, 222, 38)
+    graphics.lineStyle(2, accentAlt, 0.2)
+    for (let x = 24; x <= 216; x += 36) {
+      graphics.lineBetween(x, 22, x - 8, 48)
     }
   }
 
@@ -668,6 +1133,26 @@ class GeneratedGameScene extends Phaser.Scene {
     this.player = player.player
     this.playerHalfWidth = player.halfWidth
     this.playerHalfHeight = player.halfHeight
+    this.player.setAlpha(0.02)
+    const textureKey =
+      this.runtimeProfile === 'platformer-expedition'
+        ? this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroSideIdle)
+        : this.runtimeProfile === 'lane-runner'
+          ? this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroRunnerStepA)
+          : this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroTopIdle)
+    const display = this.createAttachedRuntimeArt(
+      textureKey,
+      this.player.x,
+      this.player.y,
+      this.runtimeProfile === 'platformer-expedition' ? 64 : this.runtimeProfile === 'lane-runner' ? 68 : 56,
+      this.runtimeProfile === 'platformer-expedition' ? 74 : this.runtimeProfile === 'lane-runner' ? 76 : 56,
+      9,
+      26,
+      10,
+      0.15,
+    )
+    this.playerArt = display.art
+    this.playerShadow = display.shadow
   }
 
   private createArenaSurvivor(): void {
@@ -723,7 +1208,9 @@ class GeneratedGameScene extends Phaser.Scene {
       this.laneSwitchCooldown = tuning?.laneSwitchCooldown ?? 0.12
     }
 
+    const previousX = this.player.x
     this.player.x = Phaser.Math.Linear(this.player.x, lanes[this.laneIndex], 0.24)
+    this.playerVelocity.set(delta > 0 ? (this.player.x - previousX) / delta : 0, 0)
 
     if (this.spawnAccumulator >= (tuning?.laneSpawnInterval ?? 0.55)) {
       this.spawnAccumulator = 0
@@ -772,8 +1259,19 @@ class GeneratedGameScene extends Phaser.Scene {
         8,
         parseColor(this.blueprint.palette.accentAlt),
       )
-      relic.setStrokeStyle(2, parseColor(this.blueprint.palette.text), 0.7)
-      this.shards.push({ shape: relic, vx: 0, vy: 0 })
+      relic.setAlpha(0.02)
+      const display = this.createAttachedRuntimeArt(
+        this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.relic),
+        relic.x,
+        relic.y,
+        30,
+        40,
+        8,
+        22,
+        8,
+        0.14,
+      )
+      this.shards.push({ shape: relic, vx: 0, vy: 0, art: display.art, shadow: display.shadow, variant: 'relic' })
     }
 
     this.relicsRemaining = this.shards.length
@@ -804,7 +1302,7 @@ class GeneratedGameScene extends Phaser.Scene {
         Phaser.Math.Distance.Between(relic.shape.x, relic.shape.y, this.player.x, this.player.y) <
         (tuning?.relicCollectRadius ?? 24)
       ) {
-        relic.shape.destroy()
+        this.destroyMovingShapePresentation(relic)
         this.shards.splice(this.shards.indexOf(relic), 1)
         this.relicsRemaining -= 1
         this.addScore(tuning?.relicPickupScore ?? 8)
@@ -861,7 +1359,7 @@ class GeneratedGameScene extends Phaser.Scene {
       }
 
       if (aabbOverlap(this.player, this.playerHalfWidth, this.playerHalfHeight, relic.shape, 12, 12)) {
-        relic.shape.destroy()
+        this.destroyMovingShapePresentation(relic)
         this.shards.splice(this.shards.indexOf(relic), 1)
         this.relicsRemaining -= 1
         this.addScore(10)
@@ -1102,6 +1600,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     const vector = new Phaser.Math.Vector2(vx, vy).normalize().scale(speed * delta)
+    this.playerVelocity.set(delta > 0 ? vector.x / delta : 0, delta > 0 ? vector.y / delta : 0)
     this.player.x = Phaser.Math.Clamp(this.player.x + vector.x, 40, GAME_WIDTH - 40)
     this.player.y = Phaser.Math.Clamp(this.player.y + vector.y, 80, GAME_HEIGHT - 48)
   }
@@ -1160,6 +1659,158 @@ class GeneratedGameScene extends Phaser.Scene {
 
     if (this.player.y > GAME_HEIGHT + 60) {
       this.health = 0
+    }
+  }
+
+  private syncRuntimePresentation(): void {
+    if (this.runtimeProfile === 'slingshot-destruction') {
+      return
+    }
+
+    this.syncPlayerPresentation()
+
+    for (const enemy of this.enemies) {
+      this.syncMovingShapePresentation(enemy, 8)
+    }
+
+    for (const projectile of this.projectiles) {
+      this.syncMovingShapePresentation(projectile, 9)
+    }
+
+    for (const shard of this.shards) {
+      this.syncMovingShapePresentation(shard, shard.variant === 'relic' ? 8 : 7)
+    }
+
+    for (const item of this.laneObjects) {
+      this.syncMovingShapePresentation(item, 8)
+    }
+
+    for (const platform of this.platforms) {
+      platform.art?.setPosition(platform.x, platform.y + 2).setDepth(6)
+      platform.shadow?.setPosition(platform.x, platform.y + platform.height * 0.38).setDepth(5)
+    }
+  }
+
+  private syncPlayerPresentation(): void {
+    if (!this.player || !this.playerArt || !this.playerShadow) {
+      return
+    }
+
+    const movingX = Math.abs(this.playerVelocity.x) > 24
+    const movingY = Math.abs(this.playerVelocity.y) > 24
+    const stepFrame = Math.floor(this.time.now / 120) % 2 === 0
+
+    if (this.runtimeProfile === 'platformer-expedition') {
+      const textureKey = !this.onGround
+        ? this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroSideJump)
+        : movingX
+          ? this.runtimeTextureKey(
+              stepFrame ? RUNTIME_TEXTURE_SUFFIXES.heroSideRunA : RUNTIME_TEXTURE_SUFFIXES.heroSideRunB,
+            )
+          : this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroSideIdle)
+      const bob = movingX && this.onGround ? Math.sin(this.time.now * 0.024) * 1.6 : 0
+      const stretchY = !this.onGround ? 1.04 : 1
+      this.playerArt
+        .setTexture(textureKey)
+        .setPosition(this.player.x, this.player.y - 6 + bob)
+        .setScale(this.facing < 0 ? -1 : 1, stretchY)
+        .setRotation(0)
+      this.playerShadow.setPosition(this.player.x, this.player.y + 16)
+      return
+    }
+
+    if (this.runtimeProfile === 'lane-runner') {
+      const textureKey = this.runtimeTextureKey(
+        stepFrame ? RUNTIME_TEXTURE_SUFFIXES.heroRunnerStepA : RUNTIME_TEXTURE_SUFFIXES.heroRunnerStepB,
+      )
+      const bob = Math.sin(this.time.now * 0.022) * 2.4
+      const tilt = Phaser.Math.Clamp(this.playerVelocity.x / 620, -0.08, 0.08)
+      this.playerArt
+        .setTexture(textureKey)
+        .setPosition(this.player.x, this.player.y - 10 + bob)
+        .setRotation(tilt)
+        .setScale(1, 1)
+      this.playerShadow.setPosition(this.player.x, this.player.y + 14)
+      return
+    }
+
+    const textureKey = movingX || movingY
+      ? this.runtimeTextureKey(stepFrame ? RUNTIME_TEXTURE_SUFFIXES.heroTopStepA : RUNTIME_TEXTURE_SUFFIXES.heroTopStepB)
+      : this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.heroTopIdle)
+    const hover = movingX || movingY ? Math.sin(this.time.now * 0.026) * 1.4 : Math.sin(this.time.now * 0.014) * 0.8
+    const tilt = Phaser.Math.Clamp(this.playerVelocity.x / 920, -0.14, 0.14)
+    this.playerArt
+      .setTexture(textureKey)
+      .setPosition(this.player.x, this.player.y - 4 + hover)
+      .setRotation(tilt)
+      .setScale(1, 1)
+    this.playerShadow.setPosition(this.player.x, this.player.y + 14)
+  }
+
+  private syncMovingShapePresentation(shapeData: MovingShape, depth: number): void {
+    if (!shapeData.art) {
+      return
+    }
+
+    const timePhase = this.time.now * 0.01
+    const art = shapeData.art.setPosition(shapeData.shape.x, shapeData.shape.y).setDepth(depth)
+    shapeData.shadow?.setPosition(shapeData.shape.x, shapeData.shape.y + 12).setDepth(depth - 1)
+
+    switch (shapeData.variant) {
+      case 'enemy-chaser': {
+        const targetAngle = this.player
+          ? Math.atan2(this.player.y - shapeData.shape.y, this.player.x - shapeData.shape.x)
+          : 0
+        art
+          .setTexture(
+            this.runtimeTextureKey(
+              Math.floor(this.time.now / 150) % 2 === 0
+                ? RUNTIME_TEXTURE_SUFFIXES.enemyChaserA
+                : RUNTIME_TEXTURE_SUFFIXES.enemyChaserB,
+            ),
+          )
+          .setRotation(targetAngle + Math.PI * 0.5)
+          .setY(shapeData.shape.y - 2 + Math.sin(timePhase + shapeData.shape.x * 0.01) * 1.8)
+        break
+      }
+      case 'enemy-patroller':
+        art
+          .setTexture(
+            this.runtimeTextureKey(
+              Math.floor(this.time.now / 160) % 2 === 0
+                ? RUNTIME_TEXTURE_SUFFIXES.enemyPatrollerA
+                : RUNTIME_TEXTURE_SUFFIXES.enemyPatrollerB,
+            ),
+          )
+          .setFlipX(shapeData.vx < 0)
+          .setY(shapeData.shape.y - 4 + Math.sin(timePhase + shapeData.shape.x * 0.014) * 1.4)
+          .setRotation(0)
+        break
+      case 'projectile':
+        art.setRotation(Math.atan2(shapeData.vy, shapeData.vx || 0.0001))
+        break
+      case 'relic':
+        art
+          .setScale(1 + Math.sin(timePhase * 0.9 + shapeData.shape.x * 0.01) * 0.04)
+          .setY(shapeData.shape.y + Math.sin(timePhase + shapeData.shape.x * 0.01) * 3)
+          .setRotation(Math.sin(timePhase * 0.5 + shapeData.shape.x * 0.01) * 0.04)
+        break
+      case 'lane-hazard':
+        art
+          .setRotation(Math.sin(timePhase + shapeData.shape.y * 0.01) * 0.03)
+          .setY(shapeData.shape.y - 2)
+        break
+      case 'lane-pickup':
+        art
+          .setScale(1 + Math.sin(timePhase * 1.4 + shapeData.shape.x * 0.01) * 0.08)
+          .setY(shapeData.shape.y + Math.sin(timePhase * 1.2 + shapeData.shape.x * 0.01) * 2)
+        break
+      case 'shard':
+      default:
+        art
+          .setRotation(timePhase * 0.9 + shapeData.shape.x * 0.01)
+          .setScale(1 + Math.sin(timePhase + shapeData.shape.y * 0.01) * 0.06)
+        break
     }
   }
 
@@ -1228,25 +1879,57 @@ class GeneratedGameScene extends Phaser.Scene {
     const side = Phaser.Math.Between(0, 3)
     const margin = 24
     const enemy = this.add.circle(0, 0, 12, parseColor(this.blueprint.palette.danger))
+    enemy.setAlpha(0.02)
 
     if (side === 0) enemy.setPosition(0 - margin, Phaser.Math.Between(80, GAME_HEIGHT))
     if (side === 1) enemy.setPosition(GAME_WIDTH + margin, Phaser.Math.Between(80, GAME_HEIGHT))
     if (side === 2) enemy.setPosition(Phaser.Math.Between(0, GAME_WIDTH), 0 - margin)
     if (side === 3) enemy.setPosition(Phaser.Math.Between(0, GAME_WIDTH), GAME_HEIGHT + margin)
 
-    enemy.setStrokeStyle(2, parseColor(this.blueprint.palette.text), 0.35)
-    this.enemies.push({ shape: enemy, vx: 0, vy: speed })
+    const display = this.createAttachedRuntimeArt(
+      this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.enemyChaserA),
+      enemy.x,
+      enemy.y,
+      40,
+      40,
+      8,
+      20,
+      8,
+      0.14,
+    )
+    this.enemies.push({
+      shape: enemy,
+      vx: 0,
+      vy: speed,
+      art: display.art,
+      shadow: display.shadow,
+      variant: 'enemy-chaser',
+    })
   }
 
   private spawnPatroller(x: number, y: number, minX: number, maxX: number): void {
     const enemy = this.add.rectangle(x, y, 24, 20, parseColor(this.blueprint.palette.danger))
-    enemy.setStrokeStyle(2, parseColor(this.blueprint.palette.text), 0.35)
+    enemy.setAlpha(0.02)
+    const display = this.createAttachedRuntimeArt(
+      this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.enemyPatrollerA),
+      x,
+      y,
+      44,
+      30,
+      8,
+      20,
+      8,
+      0.13,
+    )
     this.enemies.push({
       shape: enemy,
       vx: this.gameTypeDefinition.tuning?.platformerPatrolSpeed ?? 90,
       vy: 0,
       minX,
       maxX,
+      art: display.art,
+      shadow: display.shadow,
+      variant: 'enemy-patroller',
     })
   }
 
@@ -1279,7 +1962,26 @@ class GeneratedGameScene extends Phaser.Scene {
       5,
       parseColor(this.blueprint.palette.accentAlt),
     )
-    this.projectiles.push({ shape: projectile, vx: vector.x, vy: vector.y })
+    projectile.setAlpha(0.02)
+    const display = this.createAttachedRuntimeArt(
+      this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.projectile),
+      projectile.x,
+      projectile.y,
+      24,
+      24,
+      9,
+      12,
+      5,
+      0.1,
+    )
+    this.projectiles.push({
+      shape: projectile,
+      vx: vector.x,
+      vy: vector.y,
+      art: display.art,
+      shadow: display.shadow,
+      variant: 'projectile',
+    })
   }
 
   private fireFacingProjectile(): void {
@@ -1293,10 +1995,25 @@ class GeneratedGameScene extends Phaser.Scene {
       5,
       parseColor(this.blueprint.palette.accentAlt),
     )
+    projectile.setAlpha(0.02)
+    const display = this.createAttachedRuntimeArt(
+      this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.projectile),
+      projectile.x,
+      projectile.y,
+      24,
+      24,
+      9,
+      12,
+      5,
+      0.1,
+    )
     this.projectiles.push({
       shape: projectile,
       vx: this.facing * 360,
       vy: 0,
+      art: display.art,
+      shadow: display.shadow,
+      variant: 'projectile',
     })
   }
 
@@ -1412,7 +2129,7 @@ class GeneratedGameScene extends Phaser.Scene {
 
       if (Phaser.Math.Distance.Between(shard.shape.x, shard.shape.y, this.player.x, this.player.y) < radius) {
         this.addScore(baseScore)
-        shard.shape.destroy()
+        this.destroyMovingShapePresentation(shard)
         this.shards.splice(this.shards.indexOf(shard), 1)
       }
     }
@@ -1430,10 +2147,28 @@ class GeneratedGameScene extends Phaser.Scene {
         : parseColor(this.blueprint.palette.accent)
 
     const shard = this.add.circle(x, y, radius, color, 0.95)
+    shard.setAlpha(this.runtimeProfile === 'slingshot-destruction' ? 0.95 : 0.02)
+    let display: { art: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse } | undefined
+    if (this.runtimeProfile !== 'slingshot-destruction') {
+      display = this.createAttachedRuntimeArt(
+        this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.shard),
+        x,
+        y,
+        18,
+        18,
+        7,
+        12,
+        5,
+        0.08,
+      )
+    }
     this.shards.push({
       shape: shard,
       vx: Phaser.Math.Between(-20, 20),
       vy: Phaser.Math.Between(-20, 20) - (this.runtimeProfile === 'slingshot-destruction' ? 18 : 0),
+      art: display?.art,
+      shadow: display?.shadow,
+      variant: this.runtimeProfile === 'slingshot-destruction' ? undefined : 'shard',
     })
   }
 
@@ -1496,24 +2231,86 @@ class GeneratedGameScene extends Phaser.Scene {
 
   private spawnLaneHazard(x: number, y: number, width: number, height: number): void {
     const hazard = this.add.rectangle(x, y, width, height, parseColor(this.blueprint.palette.danger), 0.95)
-    this.laneObjects.push({ shape: hazard, vx: 0, vy: 0, kind: 'hazard' })
+    hazard.setAlpha(0.02)
+    const display = this.createAttachedRuntimeArt(
+      this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.laneHazard),
+      hazard.x,
+      hazard.y,
+      Math.max(64, width * 1.35),
+      Math.max(30, height * 1.32),
+      8,
+      Math.max(26, width * 0.55),
+      7,
+      0.12,
+    )
+    this.laneObjects.push({
+      shape: hazard,
+      vx: 0,
+      vy: 0,
+      kind: 'hazard',
+      art: display.art,
+      shadow: display.shadow,
+      variant: 'lane-hazard',
+    })
   }
 
   private spawnLanePickup(x: number, y: number, radius: number): void {
     const pickup = this.add.circle(x, y, radius, parseColor(this.blueprint.palette.accentAlt))
-    this.laneObjects.push({ shape: pickup, vx: 0, vy: 0, kind: 'pickup' })
+    pickup.setAlpha(0.02)
+    const display = this.createAttachedRuntimeArt(
+      this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.lanePickup),
+      pickup.x,
+      pickup.y,
+      Math.max(28, radius * 2.4),
+      Math.max(28, radius * 2.4),
+      8,
+      Math.max(16, radius * 1.4),
+      6,
+      0.12,
+    )
+    this.laneObjects.push({
+      shape: pickup,
+      vx: 0,
+      vy: 0,
+      kind: 'pickup',
+      art: display.art,
+      shadow: display.shadow,
+      variant: 'lane-pickup',
+    })
   }
 
   private addPlatform(x: number, y: number, width: number, height: number): void {
     const platform = this.add.rectangle(x, y, width, height, parseColor(this.blueprint.palette.surface))
-    platform.setStrokeStyle(2, parseColor(this.blueprint.palette.accentAlt), 0.2)
-    this.platforms.push({ shape: platform, x, y, width, height })
+    platform.setAlpha(0.02)
+    const display = this.createAttachedRuntimeArt(
+      this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.platform),
+      x,
+      y,
+      width * 1.04,
+      Math.max(34, height * 1.9),
+      6,
+      Math.max(40, width * 0.72),
+      10,
+      0.12,
+    )
+    this.platforms.push({ shape: platform, x, y, width, height, art: display.art, shadow: display.shadow })
   }
 
   private spawnRelic(x: number, y: number): void {
     const relic = this.add.circle(x, y, 8, parseColor(this.blueprint.palette.accentAlt))
-    relic.setStrokeStyle(2, parseColor(this.blueprint.palette.text), 0.7)
-    this.shards.push({ shape: relic, vx: 0, vy: 0 })
+    relic.setAlpha(0.02)
+    const display = this.createAttachedRuntimeArt(
+      this.runtimeTextureKey(RUNTIME_TEXTURE_SUFFIXES.relic),
+      x,
+      y,
+      30,
+      40,
+      8,
+      22,
+      8,
+      0.14,
+    )
+    this.shards.push({ shape: relic, vx: 0, vy: 0, art: display.art, shadow: display.shadow, variant: 'relic' })
   }
 
   private loadSlingshotLevel(levelIndex: number): void {
@@ -2862,7 +3659,7 @@ class GeneratedGameScene extends Phaser.Scene {
       shard.shape.alpha = Math.max(0, shard.shape.alpha - delta * 1.35)
 
       if (shard.shape.alpha <= 0.02 || shard.shape.y > GAME_HEIGHT + 40) {
-        shard.shape.destroy()
+        this.destroyMovingShapePresentation(shard)
         this.shards.splice(this.shards.indexOf(shard), 1)
       }
     }
@@ -2926,18 +3723,24 @@ class GeneratedGameScene extends Phaser.Scene {
     this.score += Math.round(baseScore * multiplier)
   }
 
+  private destroyMovingShapePresentation(shapeData: MovingShape): void {
+    shapeData.art?.destroy()
+    shapeData.shadow?.destroy()
+    shapeData.shape.destroy()
+  }
+
   private removeEnemy(enemy: MovingShape): void {
-    enemy.shape.destroy()
+    this.destroyMovingShapePresentation(enemy)
     this.enemies.splice(this.enemies.indexOf(enemy), 1)
   }
 
   private removeProjectile(projectile: MovingShape): void {
-    projectile.shape.destroy()
+    this.destroyMovingShapePresentation(projectile)
     this.projectiles.splice(this.projectiles.indexOf(projectile), 1)
   }
 
   private removeLaneObject(object: LaneObject): void {
-    object.shape.destroy()
+    this.destroyMovingShapePresentation(object)
     this.laneObjects.splice(this.laneObjects.indexOf(object), 1)
   }
 }
@@ -3004,6 +3807,26 @@ function bodyBelongsToMatterShape(body: MatterJS.BodyType, shape: MatterShape): 
   }
 
   return shape.body.parts.some((part) => part === body)
+}
+
+function mixColors(left: number, right: number, amount: number): number {
+  const t = Phaser.Math.Clamp(amount, 0, 1)
+  const leftRed = (left >> 16) & 0xff
+  const leftGreen = (left >> 8) & 0xff
+  const leftBlue = left & 0xff
+  const rightRed = (right >> 16) & 0xff
+  const rightGreen = (right >> 8) & 0xff
+  const rightBlue = right & 0xff
+
+  const red = Math.round(Phaser.Math.Linear(leftRed, rightRed, t))
+  const green = Math.round(Phaser.Math.Linear(leftGreen, rightGreen, t))
+  const blue = Math.round(Phaser.Math.Linear(leftBlue, rightBlue, t))
+
+  return (red << 16) | (green << 8) | blue
+}
+
+function shadeColor(color: number, amount: number): number {
+  return amount >= 0 ? mixColors(color, 0xffffff, amount) : mixColors(color, 0x000000, Math.abs(amount))
 }
 
 function parseColor(color: string): number {
