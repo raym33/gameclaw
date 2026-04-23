@@ -586,7 +586,7 @@ class GuardiansBootScene extends GuardiansBaseScene {
 
   create(): void {
     prepareGuardiansTextures(this)
-    this.scene.start(TITLE_SCENE_KEY)
+    this.scene.start(FARM_SCENE_KEY)
   }
 }
 
@@ -854,7 +854,6 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.createField25DHud()
     this.createAmbientEffects()
     this.bindField25DInput()
-    this.updateField25DGuide('Explora el campo 2.5D. Acercate a una estacion y pulsa ESPACIO.')
   }
 
   private updateField25DGame(delta: number): void {
@@ -1055,14 +1054,13 @@ class GuardiansFarmScene extends GuardiansBaseScene {
         .setDisplaySize(70 * p.scale, 70 * p.scale)
         .setDepth(p.y)
       const label = this.add
-        .text(p.x, p.y + 40 * p.scale, def.shortLabel, {
+        .text(p.x, p.y + 40 * p.scale, '', {
           fontFamily: 'Baloo 2, Nunito, sans-serif',
           fontSize: '15px',
           color: '#16324a',
-          backgroundColor: '#fff9e8',
-          padding: { left: 8, right: 8, top: 3, bottom: 3 },
         })
         .setOrigin(0.5)
+        .setAlpha(0)
         .setDepth(p.y + 2)
 
       const station: Field25DStationState = {
@@ -1149,24 +1147,15 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   }
 
   private createField25DHud(): void {
-    this.add.rectangle(VIEW_WIDTH / 2, 36, 900, 70, parseColor('#fff8ef'), 0.92).setScrollFactor(0).setDepth(3000)
+    this.add.rectangle(66, 34, 92, 46, parseColor('#fff8ef'), 0.9).setScrollFactor(0).setDepth(3000)
       .setStrokeStyle(3, parseColor('#8be0b0'), 0.72)
-    this.add
-      .text(52, 34, 'Campo Magico 2.5D', {
-        fontFamily: 'Baloo 2, Nunito, sans-serif',
-        fontSize: '24px',
-        color: '#16324a',
-      })
-      .setOrigin(0, 0.5)
-      .setScrollFactor(0)
-      .setDepth(3001)
     this.field25DProgressText = this.add
-      .text(342, 34, 'Soluciones 0 / 9   Puntos 0', {
+      .text(66, 34, '0/9', {
         fontFamily: 'Nunito, sans-serif',
-        fontSize: '20px',
+        fontSize: '22px',
         color: '#28536d',
       })
-      .setOrigin(0, 0.5)
+      .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(3001)
     this.field25DGuideText = this.add
@@ -1180,6 +1169,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(3001)
+      .setVisible(false)
   }
 
   private bindField25DInput(): void {
@@ -1212,7 +1202,6 @@ class GuardiansFarmScene extends GuardiansBaseScene {
 
       const fieldPoint = this.screenToField25D(worldPoint.x, worldPoint.y)
       this.getActiveField25DActor().target = fieldPoint
-      this.updateField25DGuide('Camina por el campo y busca las maquinas ecologicas que se mueven.')
     })
   }
 
@@ -1224,7 +1213,6 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
       this.field25DActiveRole = this.field25DActiveRole === 'cat' ? 'dog' : 'cat'
       this.getActiveField25DActor().celebrateUntil = this.time.now + 350
-      this.updateField25DGuide(this.field25DActiveRole === 'cat' ? 'Controlas a Gato.' : 'Controlas a Perro.')
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE) && this.field25DCurrentStation) {
@@ -1325,7 +1313,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
         .setDisplaySize((active ? 82 : 72) * p.scale, (active ? 82 : 72) * p.scale)
         .setDepth(depth)
         .setTint(active ? 0xffffff : 0xeef7ef)
-      station.label.setPosition(p.x, p.y + 43 * p.scale).setDepth(depth + 4).setAlpha(active || isCurrent ? 1 : 0.74)
+      station.label.setPosition(p.x, p.y + 43 * p.scale).setDepth(depth + 4).setAlpha(0)
 
       station.spinners.forEach((spinner, index) => {
         const offsets = [-32, 0, 31]
@@ -1399,12 +1387,12 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       this.field25DStations.find((station) => !station.placed && Phaser.Math.Distance.Between(actor.fieldX, actor.fieldY, station.fieldX, station.fieldY) < 82) ?? null
 
     if (this.field25DCurrentStation) {
-      this.updateField25DGuide(`ESPACIO: ${this.field25DCurrentStation.def.label}`)
+      this.field25DCurrentStation.ring.setStrokeStyle(5, parseColor('#ffd66d'), 0.9)
     }
   }
 
   private updateField25DHud(): void {
-    this.field25DProgressText.setText(`Soluciones ${this.completedTaskIds.size} / 9   Puntos ${this.field25DScore}`)
+    this.field25DProgressText.setText(`${this.completedTaskIds.size}/9`)
   }
 
   private focusField25DStation(station: Field25DStationState): void {
@@ -1412,7 +1400,6 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     const distance = Phaser.Math.Distance.Between(actor.fieldX, actor.fieldY, station.fieldX, station.fieldY)
     if (distance > 88) {
       actor.target = new Phaser.Math.Vector2(station.fieldX, station.fieldY + 42)
-      this.updateField25DGuide(`Ve hacia ${station.def.shortLabel}. Cuando estes cerca pulsa ESPACIO.`)
       return
     }
 
@@ -1421,7 +1408,6 @@ class GuardiansFarmScene extends GuardiansBaseScene {
 
   private openField25DDialog(station: Field25DStationState): void {
     if (station.placed) {
-      this.updateField25DGuide(`${station.def.shortLabel} ya esta activado.`)
       return
     }
 
@@ -1479,7 +1465,6 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.field25DDialog = null
     this.field25DCat.celebrateUntil = this.time.now + 1600
     this.field25DDog.celebrateUntil = this.time.now + 1600
-    this.updateField25DGuide(station.def.celebration)
     const burstPoint = this.projectField25D(station.fieldX, station.fieldY)
     this.emitMagicBurst(burstPoint.x, burstPoint.y, '#84df9f')
 
@@ -1515,7 +1500,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   }
 
   private updateField25DGuide(text: string): void {
-    this.field25DGuideText?.setText(text)
+    this.field25DGuideText?.setText(text).setVisible(text.length > 0)
   }
 
   private projectField25D(fieldX: number, fieldY: number): Field25DProjection {

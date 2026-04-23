@@ -423,19 +423,6 @@ button {
   pointer-events: none;
 }
 
-.demo-direct-status {
-  max-width: min(560px, calc(100vw - 190px));
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  background: rgba(4, 9, 12, 0.58);
-  color: rgba(255, 248, 239, 0.88);
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  backdrop-filter: blur(12px);
-}
-
 .demo-hud-overlay button {
   pointer-events: auto;
   white-space: nowrap;
