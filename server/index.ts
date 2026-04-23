@@ -5,7 +5,7 @@ import express from 'express'
 import multer from 'multer'
 
 import { buildFallbackBlueprint } from './blueprint'
-import { buildAstralOrchardDemoResult } from './demo'
+import { buildAstralOrchardDemoResult, buildGuardiansFieldDemoResult } from './demo'
 import { collectAIInputWarnings, generateBlueprintWithAI, hasAIConfig, resolveAIProvider } from './openai'
 import { persistRun } from './storage'
 import type { GenerationResult, StoredGeneration } from '../shared/game'
@@ -43,6 +43,16 @@ app.get('/api/demo/astral-orchard', async (_request, response) => {
   await persistRun({
     ...result,
     notes: 'Curated local Astral Orchard demo',
+    files: [],
+  })
+  response.json(result)
+})
+
+app.get('/api/demo/guardians-field', async (_request, response) => {
+  const result = buildGuardiansFieldDemoResult()
+  await persistRun({
+    ...result,
+    notes: 'Curated local Gato y Perro magical field demo',
     files: [],
   })
   response.json(result)

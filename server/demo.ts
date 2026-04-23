@@ -118,3 +118,121 @@ export function buildAstralOrchardDemoResult(): GenerationResult {
     createdAt: new Date().toISOString(),
   }
 }
+
+export function buildGuardiansFieldDemoResult(): GenerationResult {
+  const blueprint = normalizeBlueprint(
+    {
+      title: 'Gato y Perro, Guardianes del Campo Magico',
+      tagline: 'Heal a magical farm with nine eco inventions, happy animals, and a bright child-friendly adventure.',
+      gameTypeKit: 'guided-task-simulation',
+      supportLevel: 'native',
+      genre: 'Educational eco farm adventure',
+      playerFantasy:
+        'Guide a brave orange cat and a joyful brown dog across a magical countryside, placing green solutions that heal the land in real time.',
+      worldSummary:
+        'A once-happy field is drying out. Energy hills, a crystal river, orchards, corrals, and flower meadows wait for the player to restore them with gentle eco stations.',
+      visualStyle:
+        'Storybook cartoon, top-down family game, lush painterly farm details, soft sunlight, colorful flowers, and expressive animal animation.',
+      audioMood:
+        'Cheerful rural ambience, playful chimes, gentle wind, clean water sparkle, and short celebratory cues for every restoration task.',
+      noveltyHook:
+        'Each ecological solution changes the farm instantly: grass returns, the river clears, flowers bloom, and nearby animals celebrate alongside Gato and Perro.',
+      approximationStrategy:
+        'This curated demo uses a handcrafted multi-scene educational runtime with a custom farm map, companion follow behavior, station interactions, and visible world restoration.',
+      controlNotes: [
+        'Move with WASD or arrow keys, or click on the ground to guide the active hero.',
+        'Press TAB to swap between Gato and Perro; the other friend follows automatically.',
+        'Use SPACE or click near a glowing station to learn and place an ecological solution.',
+      ],
+      coreLoop: [
+        'Explore the farm and discover a glowing eco station.',
+        'Read a child-friendly explanation and place the solution with one big confirmation.',
+        'Watch the map transform, animals celebrate, and the field become greener.',
+      ],
+      mechanicHighlights: [
+        'Title, tutorial, main farm, and celebration ending scenes tailored for ages 3-8.',
+        'Nine ecological tasks spread across energy, water, agriculture, livestock, and nature care zones.',
+        'Cat and dog companion behaviors, animated NPC animals, and a farm that visually upgrades in three restoration stages.',
+      ],
+      implementationNotes: [
+        'Use a dedicated curated Phaser runtime instead of the generic relic-hunt slice so the brief can support title, tutorial, guided tasks, and a richer map.',
+        'Keep interactions frictionless: soft collisions, readable popups, generous activation range, and one-tap placement.',
+      ],
+      productionBacklog: [
+        'Swap procedural audio stingers for voiced child narration and localized VO packs.',
+        'Replace generated runtime textures with uploaded final production sprite sheets when available.',
+        'Add save-progress stars, printable eco badges, and more reactive farm animals.',
+      ],
+      levelMoments: [
+        'Meet the butterfly guide and learn how to heal the field.',
+        'Light up the farm roof with solar panels and see the energy hill glow.',
+        'Clean the river so fish sparkle and the lower-right zone becomes blue again.',
+        'Finish the ninth eco task and watch the whole farm celebrate under a rainbow.',
+      ],
+      assetPrompts: [
+        'Orange eco cat hero top-down children game sprite sheet with scarf and backpack',
+        'Brown dog companion top-down children game sprite sheet with blue collar and leaf charm',
+        'Magical eco farm stations: solar panels, wind turbines, irrigation, purifier, crops, livestock, and friendly insects',
+      ],
+      imageInsights: [
+        'This demo is curated for educational eco-farm play rather than a combat loop.',
+        'The runtime should feel like a premium app-store kids game slice: readable, gentle, bright, and reactive.',
+      ],
+      winCondition: 'Place all nine ecological solutions and turn the magical field bright green again.',
+      loseCondition: 'There is no harsh fail state; if the player pauses, the butterfly simply invites them back to the next task.',
+      palette: {
+        bg: '#7fd2ff',
+        surface: '#a8774d',
+        accent: '#ffc94d',
+        accentAlt: '#57d6a1',
+        danger: '#ff8d6d',
+        text: '#16324a',
+      },
+      systems: {
+        camera: 'top-down',
+        movement: 'free-8dir',
+        physics: 'scripted-arcade',
+        combat: 'none',
+        objective: 'collect',
+        worldLayout: 'relic-field',
+        specialMechanic: 'combo-chain',
+      },
+      physics: {
+        gravity: 0.8,
+        bounce: 0.12,
+        friction: 0.08,
+        drag: 0.02,
+        projectilePower: 4,
+        structuralIntegrity: 3,
+      },
+      hero: {
+        name: 'Gato',
+        role: 'eco guardian',
+        description: 'A curious orange kitten with a green scarf and a backpack full of bright ideas.',
+        abilities: ['Eco spark', 'Happy jump', 'Kind courage'],
+      },
+      enemies: [
+        {
+          name: 'Perro',
+          role: 'companion guardian',
+          description: 'A loyal brown puppy who follows, points at clues, and celebrates every green victory.',
+          abilities: ['Fast tail wag', 'Helpful bark', 'Friendly follow'],
+        },
+      ],
+    },
+    {
+      notes: 'Curated Gato y Perro magical field educational demo',
+      fileNames: ['guardians-field-demo'],
+      sourceImageCount: 0,
+    },
+  )
+
+  return {
+    blueprint,
+    generationSource: 'fallback',
+    providerKind: 'fallback',
+    providerLabel: 'Curated Demo',
+    warnings: [],
+    createdAt: new Date().toISOString(),
+  }
+}

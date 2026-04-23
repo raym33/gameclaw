@@ -19,8 +19,8 @@ export async function requestGeneration(files: File[], notes: string): Promise<G
   return data
 }
 
-export async function requestAstralOrchardDemo(): Promise<GenerationResult> {
-  const response = await fetch('/api/demo/astral-orchard')
+export async function requestDemo(demoId: 'astral-orchard' | 'guardians-field'): Promise<GenerationResult> {
+  const response = await fetch(`/api/demo/${demoId}`)
   const data = (await response.json()) as GenerationResult | { error: string }
 
   if (!response.ok || 'error' in data) {
@@ -28,4 +28,12 @@ export async function requestAstralOrchardDemo(): Promise<GenerationResult> {
   }
 
   return data
+}
+
+export async function requestAstralOrchardDemo(): Promise<GenerationResult> {
+  return requestDemo('astral-orchard')
+}
+
+export async function requestGuardiansFieldDemo(): Promise<GenerationResult> {
+  return requestDemo('guardians-field')
 }

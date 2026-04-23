@@ -15,6 +15,7 @@ import {
   type RuntimeProfile,
 } from '../../shared/game'
 import { getGameTypeKit, type GameTypeKit } from '../../shared/gameTypeKits'
+import { createGuardiansFieldGameConfig } from './guardiansFieldDemo'
 import { getPlatformerCourse, getRelicHuntLayout } from './gameTypeStageLayouts'
 import {
   createRuntimeFinishOverlay,
@@ -368,6 +369,10 @@ export function createGameConfig(
   target: HTMLDivElement,
   blueprint: GameBlueprint,
 ): Phaser.Types.Core.GameConfig {
+  if (blueprint.slug === 'gato-y-perro-guardianes-del-campo-magico') {
+    return createGuardiansFieldGameConfig(target, blueprint)
+  }
+
   const runtimeProfile = deriveRuntimeProfile(blueprint.systems)
 
   return {

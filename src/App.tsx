@@ -15,7 +15,7 @@ import {
 } from '../shared/game'
 import { GAME_TYPE_KIT_LABELS } from '../shared/gameTypeKits'
 import { GameCanvas } from './components/GameCanvas'
-import { requestAstralOrchardDemo, requestGeneration } from './lib/api'
+import { requestDemo, requestGeneration } from './lib/api'
 
 type UploadItem = {
   file: File
@@ -34,14 +34,12 @@ const EXAMPLE_NOTES = `Quiero algo entre precision platformer y expedicion arque
 export default function App() {
   const [uploads, setUploads] = useState<UploadItem[]>([])
   const [notes, setNotes] = useState(EXAMPLE_NOTES)
+  const directDemoId = useMemo(() => new URLSearchParams(window.location.search).get('demo'), [])
   const [result, setResult] = useState<GenerationResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
-  const isDirectDemo = useMemo(
-    () => new URLSearchParams(window.location.search).get('demo') === 'astral-orchard',
-    [],
-  )
+  const isDirectDemo = directDemoId === 'astral-orchard' || directDemoId === 'guardians-field'
 
   useEffect(() => {
     if (!isDirectDemo) {
@@ -58,7 +56,7 @@ export default function App() {
         setBusy(true)
         setError(null)
 
-        return requestAstralOrchardDemo()
+        return requestDemo(directDemoId as 'astral-orchard' | 'guardians-field')
       })
       .then((generation) => {
         if (cancelled || !generation) {
@@ -85,7 +83,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [isDirectDemo])
+  }, [directDemoId, isDirectDemo])
 
   useEffect(() => {
     return () => {
@@ -151,7 +149,7 @@ export default function App() {
     setError(null)
 
     try {
-      const generation = await requestAstralOrchardDemo()
+      const generation = await requestDemo('astral-orchard')
       startTransition(() => {
         setResult(generation)
       })
