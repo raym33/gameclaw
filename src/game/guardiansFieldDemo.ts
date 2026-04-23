@@ -159,6 +159,53 @@ type HeroBadgeState = {
   portrait: Phaser.GameObjects.Image
 }
 
+type Field25DActorState = {
+  role: ActorRole
+  fieldX: number
+  fieldY: number
+  target: Phaser.Math.Vector2 | null
+  sprite: Phaser.GameObjects.Image
+  shadow: Phaser.GameObjects.Ellipse
+  direction: Direction
+  pose: CharacterPose
+  celebrateUntil: number
+}
+
+type Field25DAnimalState = {
+  kind: AnimalKind
+  zone: TaskZone
+  fieldX: number
+  fieldY: number
+  baseX: number
+  baseY: number
+  phase: number
+  sprite: Phaser.GameObjects.Image
+  shadow: Phaser.GameObjects.Ellipse
+  reactUntil: number
+}
+
+type Field25DStationState = {
+  def: EcoTaskDefinition
+  fieldX: number
+  fieldY: number
+  placed: boolean
+  shadow: Phaser.GameObjects.Ellipse
+  ring: Phaser.GameObjects.Ellipse
+  icon: Phaser.GameObjects.Image
+  label: Phaser.GameObjects.Text
+  spinners: Phaser.GameObjects.Container[]
+  pulses: Phaser.GameObjects.Ellipse[]
+  orbiters: Phaser.GameObjects.Image[]
+  mover?: Phaser.GameObjects.Image
+  phase: number
+}
+
+type Field25DProjection = {
+  x: number
+  y: number
+  scale: number
+}
+
 const GUARDIAN_SHEET_KEYS: Record<ActorRole, string> = {
   cat: GUARDIANS_TEXTURES.catSheet,
   dog: GUARDIANS_TEXTURES.dogSheet,
@@ -341,6 +388,37 @@ const NPC_BLUEPRINTS = [
   { kind: 'fish' as AnimalKind, zone: 'water' as TaskZone, x: 1272, y: 520, speed: 0.62 },
   { kind: 'fish' as AnimalKind, zone: 'water' as TaskZone, x: 1330, y: 608, speed: 0.66 },
 ] as const
+
+const FIELD_25D_BOUNDS = {
+  minX: 120,
+  maxX: 1080,
+  minY: 90,
+  maxY: 760,
+} as const
+
+const FIELD_25D_TASK_POSITIONS: Record<TaskId, { x: number; y: number }> = {
+  'solar-panels': { x: 300, y: 190 },
+  'wind-turbines': { x: 470, y: 135 },
+  'solar-tractor': { x: 470, y: 360 },
+  'energy-automation': { x: 230, y: 315 },
+  'water-automation': { x: 850, y: 260 },
+  'water-purifier': { x: 930, y: 420 },
+  'eco-farm': { x: 350, y: 575 },
+  'eco-livestock': { x: 610, y: 625 },
+  'insect-control': { x: 860, y: 625 },
+}
+
+const FIELD_25D_ANIMALS: Array<{ kind: AnimalKind; zone: TaskZone; x: number; y: number }> = [
+  { kind: 'bird', zone: 'energy', x: 540, y: 112 },
+  { kind: 'bird', zone: 'energy', x: 625, y: 178 },
+  { kind: 'cow', zone: 'farm', x: 700, y: 640 },
+  { kind: 'hen', zone: 'farm', x: 570, y: 695 },
+  { kind: 'bunny', zone: 'farm', x: 430, y: 640 },
+  { kind: 'bee', zone: 'nature', x: 820, y: 560 },
+  { kind: 'bee', zone: 'nature', x: 930, y: 660 },
+  { kind: 'fish', zone: 'water', x: 965, y: 480 },
+  { kind: 'fish', zone: 'water', x: 880, y: 535 },
+]
 
 export function createGuardiansFieldGameConfig(
   target: HTMLDivElement,
@@ -717,6 +795,19 @@ class GuardiansFarmScene extends GuardiansBaseScene {
   private backgroundImage!: Phaser.GameObjects.Image
   private sparkleLayer!: Phaser.GameObjects.Particles.ParticleEmitter
   private clouds: CloudState[] = []
+  private field25DGround!: Phaser.GameObjects.Graphics
+  private field25DDecor!: Phaser.GameObjects.Graphics
+  private field25DFront!: Phaser.GameObjects.Graphics
+  private field25DCat!: Field25DActorState
+  private field25DDog!: Field25DActorState
+  private field25DActiveRole: ActorRole = 'cat'
+  private field25DStations: Field25DStationState[] = []
+  private field25DAnimals: Field25DAnimalState[] = []
+  private field25DCurrentStation: Field25DStationState | null = null
+  private field25DDialog: Phaser.GameObjects.Container | null = null
+  private field25DProgressText!: Phaser.GameObjects.Text
+  private field25DGuideText!: Phaser.GameObjects.Text
+  private field25DScore = 0
 
   constructor(blueprint: GameBlueprint) {
     super(FARM_SCENE_KEY, blueprint)
@@ -724,23 +815,7 @@ class GuardiansFarmScene extends GuardiansBaseScene {
 
   create(): void {
     prepareGuardiansTextures(this)
-    this.input.mouse?.disableContextMenu()
-    this.matter.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
-    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
-    this.cameras.main.setZoom(1)
-    this.cameras.main.setRoundPixels(true)
-
-    this.createWorldLayers()
-    this.createStaticObstacles()
-    this.createActors()
-    this.createAnimals()
-    this.createTaskStations()
-    this.createHud()
-    this.createPopup()
-    this.createAmbientEffects()
-    this.bindInput()
-    this.redrawFarmWorld()
-    this.cameras.main.startFollow(this.cat.body, true, 0.08, 0.08)
+    this.createField25DGame()
   }
 
   update(_time: number, deltaMs: number): void {
@@ -748,16 +823,717 @@ class GuardiansFarmScene extends GuardiansBaseScene {
       return
     }
 
-    const delta = deltaMs / 1000
-    this.handleControls(delta)
-    this.updateActor(this.cat, delta, this.activeRole === 'cat')
-    this.updateActor(this.dog, delta, this.activeRole === 'dog')
+    this.updateField25DGame(deltaMs / 1000)
+  }
+
+  private createField25DGame(): void {
+    this.input.mouse?.disableContextMenu()
+    this.paused = false
+    this.completedCount = 0
+    this.ecoScore = 0
+    this.field25DScore = 0
+    this.field25DActiveRole = 'cat'
+    this.field25DCurrentStation = null
+    this.field25DDialog = null
+    this.completedTaskIds.clear()
+    this.zoneProgress.energy = 0
+    this.zoneProgress.water = 0
+    this.zoneProgress.farm = 0
+    this.zoneProgress.nature = 0
+    this.cameras.main.setBackgroundColor(parseColor('#bcefff'))
+    this.cameras.main.setZoom(1)
+    this.cameras.main.setRoundPixels(true)
+
+    this.field25DGround = this.add.graphics().setDepth(-40)
+    this.field25DDecor = this.add.graphics().setDepth(-8)
+    this.field25DFront = this.add.graphics().setDepth(2000)
+    this.redrawField25DWorld()
+    this.createField25DStations()
+    this.createField25DAnimals()
+    this.createField25DActors()
+    this.createField25DHud()
+    this.createAmbientEffects()
+    this.bindField25DInput()
+    this.updateField25DGuide('Explora el campo 2.5D. Acercate a una estacion y pulsa ESPACIO.')
+  }
+
+  private updateField25DGame(delta: number): void {
+    this.updateField25DControls(delta)
+    this.updateField25DActor(this.field25DCat, delta)
+    this.updateField25DFollower(delta)
+    this.updateField25DActor(this.field25DDog, delta)
+    this.updateField25DStations(delta)
+    this.updateField25DAnimals(delta)
     this.updateClouds(delta)
-    this.updateAnimals(delta)
-    this.updateTaskStations()
-    this.updateMachineMotions(delta)
-    this.updateTaskPrompt()
-    this.updateHud()
+    this.updateField25DCurrentStation()
+    this.updateField25DHud()
+  }
+
+  private redrawField25DWorld(): void {
+    const progress = this.field25DStations.length === 0 ? 0 : this.completedTaskIds.size / TASKS.length
+    this.field25DGround.clear()
+    this.field25DDecor.clear()
+    this.field25DFront.clear()
+
+    for (let i = 0; i < 16; i += 1) {
+      const t = i / 15
+      this.field25DGround.fillStyle(mixColors(parseColor('#8fd8ff'), parseColor('#f4fbff'), t), 1)
+      this.field25DGround.fillRect(0, i * 26, VIEW_WIDTH, 28)
+    }
+
+    this.field25DGround.fillStyle(parseColor('#ffffff'), 0.7)
+    this.field25DGround.fillEllipse(170, 92, 180, 44)
+    this.field25DGround.fillEllipse(520, 66, 220, 48)
+    this.field25DGround.fillEllipse(810, 110, 190, 42)
+    this.field25DGround.fillStyle(parseColor('#ffe27a'), 0.92)
+    this.field25DGround.fillCircle(796, 78, 38)
+    this.field25DGround.fillStyle(parseColor('#fff7ba'), 0.26)
+    this.field25DGround.fillCircle(796, 78, 72)
+
+    this.field25DGround.fillStyle(parseColor('#8fb96c'), 0.92)
+    this.field25DGround.fillEllipse(220, 176, 420, 112)
+    this.field25DGround.fillEllipse(646, 172, 560, 132)
+    this.field25DGround.fillEllipse(924, 182, 260, 94)
+
+    const groundColor = mixColors(parseColor('#b99258'), parseColor('#78cd68'), progress * 0.92)
+    this.field25DGround.fillStyle(groundColor, 1)
+    this.field25DGround.fillPoints([
+      new Phaser.Geom.Point(90, 158),
+      new Phaser.Geom.Point(866, 158),
+      new Phaser.Geom.Point(956, 530),
+      new Phaser.Geom.Point(8, 530),
+    ], true)
+    this.field25DGround.fillStyle(parseColor('#fff6cf'), 0.12 + progress * 0.1)
+    this.field25DGround.fillPoints([
+      new Phaser.Geom.Point(160, 182),
+      new Phaser.Geom.Point(824, 182),
+      new Phaser.Geom.Point(900, 498),
+      new Phaser.Geom.Point(70, 498),
+    ], true)
+
+    for (let row = 0; row < 9; row += 1) {
+      const y = 198 + row * 34
+      const left = 130 - row * 8
+      const right = 832 + row * 7
+      const alpha = 0.18 + progress * 0.2
+      this.field25DGround.lineStyle(5 + row * 0.22, mixColors(parseColor('#805d38'), parseColor('#2f9d57'), progress), alpha)
+      this.field25DGround.lineBetween(left, y, right, y + row * 8)
+    }
+
+    this.field25DGround.fillStyle(parseColor('#477b7d'), 0.34 - progress * 0.14)
+    this.field25DGround.fillPoints([
+      new Phaser.Geom.Point(732, 178),
+      new Phaser.Geom.Point(820, 178),
+      new Phaser.Geom.Point(922, 524),
+      new Phaser.Geom.Point(790, 524),
+    ], true)
+    this.field25DGround.fillStyle(mixColors(parseColor('#5e9897'), parseColor('#8deaff'), progress), 0.62 + progress * 0.24)
+    this.field25DGround.fillPoints([
+      new Phaser.Geom.Point(754, 178),
+      new Phaser.Geom.Point(804, 178),
+      new Phaser.Geom.Point(892, 524),
+      new Phaser.Geom.Point(820, 524),
+    ], true)
+    this.field25DGround.lineStyle(3, parseColor('#dff8ff'), 0.18 + progress * 0.36)
+    for (let i = 0; i < 8; i += 1) {
+      this.field25DGround.lineBetween(766 + i * 6, 205 + i * 39, 822 + i * 4, 218 + i * 38)
+    }
+
+    this.drawField25DLandmark(260, 260, progress, this.taskIsPlaced('solar-panels'), this.taskIsPlaced('energy-automation'))
+    this.drawField25DBarn(612, 650, progress)
+    this.drawField25DCropRows(350, 584, progress)
+    this.drawField25DWaterBeds(845, 284, progress)
+
+    this.field25DFront.fillStyle(parseColor('#17354b'), 0.16)
+    this.field25DFront.fillRoundedRect(18, 92, 350, 34, 16)
+    this.field25DFront.fillStyle(parseColor('#fff8ef'), 0.94)
+    this.field25DFront.fillRoundedRect(26, 98, 334, 22, 11)
+  }
+
+  private drawField25DLandmark(x: number, y: number, progress: number, solarPlaced: boolean, automationPlaced: boolean): void {
+    const p = this.projectField25D(x, y)
+    this.field25DDecor.fillStyle(parseColor('#17354b'), 0.16)
+    this.field25DDecor.fillEllipse(p.x, p.y + 56 * p.scale, 154 * p.scale, 36 * p.scale)
+    this.field25DDecor.fillStyle(parseColor('#fff2de'), 0.98)
+    this.field25DDecor.fillRoundedRect(p.x - 62 * p.scale, p.y - 10 * p.scale, 124 * p.scale, 88 * p.scale, 18 * p.scale)
+    this.field25DDecor.fillStyle(parseColor('#c86d4e'), 0.98)
+    this.field25DDecor.fillTriangle(p.x - 78 * p.scale, p.y, p.x, p.y - 58 * p.scale, p.x + 78 * p.scale, p.y)
+    this.field25DDecor.fillStyle(parseColor('#8c5b42'), 0.98)
+    this.field25DDecor.fillRoundedRect(p.x - 16 * p.scale, p.y + 34 * p.scale, 32 * p.scale, 44 * p.scale, 10 * p.scale)
+
+    for (let i = 0; i < 3; i += 1) {
+      this.field25DDecor.fillStyle(parseColor(automationPlaced ? '#ffe27a' : '#dce9f7'), automationPlaced ? 1 : 0.76)
+      this.field25DDecor.fillRoundedRect(p.x - 48 * p.scale + i * 36 * p.scale, p.y + 20 * p.scale, 22 * p.scale, 18 * p.scale, 6 * p.scale)
+    }
+
+    if (solarPlaced) {
+      this.field25DDecor.fillStyle(parseColor('#2e71b8'), 1)
+      this.field25DDecor.fillRoundedRect(p.x - 48 * p.scale, p.y - 30 * p.scale, 44 * p.scale, 22 * p.scale, 6 * p.scale)
+      this.field25DDecor.fillRoundedRect(p.x + 10 * p.scale, p.y - 36 * p.scale, 44 * p.scale, 22 * p.scale, 6 * p.scale)
+      this.field25DDecor.fillStyle(parseColor('#dff8ff'), 0.8)
+      this.field25DDecor.fillCircle(p.x + Math.sin(this.time.now * 0.01) * 12, p.y - 42 * p.scale, 8 * p.scale)
+    }
+
+    this.field25DDecor.fillStyle(mixColors(parseColor('#b99258'), parseColor('#78cd68'), progress), 0.96)
+    this.field25DDecor.fillRoundedRect(p.x - 86 * p.scale, p.y + 76 * p.scale, 172 * p.scale, 20 * p.scale, 9 * p.scale)
+  }
+
+  private drawField25DBarn(x: number, y: number, progress: number): void {
+    const p = this.projectField25D(x, y)
+    this.field25DDecor.fillStyle(parseColor('#17354b'), 0.18)
+    this.field25DDecor.fillEllipse(p.x, p.y + 44 * p.scale, 176 * p.scale, 34 * p.scale)
+    this.field25DDecor.fillStyle(parseColor('#c2764f'), 0.98)
+    this.field25DDecor.fillRoundedRect(p.x - 70 * p.scale, p.y - 42 * p.scale, 140 * p.scale, 90 * p.scale, 18 * p.scale)
+    this.field25DDecor.fillStyle(parseColor('#8b4d3e'), 0.96)
+    this.field25DDecor.fillTriangle(p.x - 84 * p.scale, p.y - 28 * p.scale, p.x, p.y - 88 * p.scale, p.x + 84 * p.scale, p.y - 28 * p.scale)
+    this.field25DDecor.fillStyle(mixColors(parseColor('#caa177'), parseColor('#75cf66'), progress), 0.98)
+    this.field25DDecor.fillRoundedRect(p.x - 94 * p.scale, p.y + 56 * p.scale, 188 * p.scale, 28 * p.scale, 14 * p.scale)
+  }
+
+  private drawField25DCropRows(x: number, y: number, progress: number): void {
+    const p = this.projectField25D(x, y)
+    for (let row = 0; row < 5; row += 1) {
+      const rowY = p.y - 54 * p.scale + row * 24 * p.scale
+      this.field25DDecor.fillStyle(parseColor('#8d5f38'), 0.62)
+      this.field25DDecor.fillRoundedRect(p.x - 118 * p.scale, rowY, 230 * p.scale, 15 * p.scale, 8 * p.scale)
+      for (let i = 0; i < 8; i += 1) {
+        this.field25DDecor.fillStyle(parseColor('#4fb960'), 0.54 + progress * 0.42)
+        this.field25DDecor.fillEllipse(p.x - 96 * p.scale + i * 28 * p.scale, rowY - 4 * p.scale, 12 * p.scale, (8 + progress * 12) * p.scale)
+      }
+    }
+  }
+
+  private drawField25DWaterBeds(x: number, y: number, progress: number): void {
+    const p = this.projectField25D(x, y)
+    for (let row = 0; row < 4; row += 1) {
+      const rowY = p.y - 28 * p.scale + row * 22 * p.scale
+      this.field25DDecor.fillStyle(mixColors(parseColor('#a1744a'), parseColor('#70c86a'), progress), 0.74)
+      this.field25DDecor.fillRoundedRect(p.x - 80 * p.scale, rowY, 158 * p.scale, 13 * p.scale, 7 * p.scale)
+      this.field25DDecor.lineStyle(2, parseColor('#7fd2ff'), 0.2 + progress * 0.44)
+      this.field25DDecor.lineBetween(p.x - 86 * p.scale, rowY + 4 * p.scale, p.x + 84 * p.scale, rowY + 4 * p.scale)
+    }
+  }
+
+  private createField25DActors(): void {
+    this.field25DCat = this.createField25DActor('cat', 520, 430)
+    this.field25DDog = this.createField25DActor('dog', 456, 468)
+  }
+
+  private createField25DActor(role: ActorRole, fieldX: number, fieldY: number): Field25DActorState {
+    const p = this.projectField25D(fieldX, fieldY)
+    const shadow = this.add.ellipse(p.x, p.y + 18 * p.scale, 34 * p.scale, 13 * p.scale, 0x06141f, 0.2).setDepth(p.y - 1)
+    const sprite = this.add
+      .image(p.x, p.y - 26 * p.scale, GUARDIAN_SHEET_KEYS[role], 0)
+      .setDisplaySize(72 * p.scale, 72 * p.scale)
+      .setDepth(p.y)
+    applyGuardianArt(sprite, role, 'down', 'idle')
+
+    return {
+      role,
+      fieldX,
+      fieldY,
+      target: null,
+      sprite,
+      shadow,
+      direction: 'down',
+      pose: 'idle',
+      celebrateUntil: 0,
+    }
+  }
+
+  private createField25DStations(): void {
+    this.field25DStations = TASKS.map((def) => {
+      const position = FIELD_25D_TASK_POSITIONS[def.id]
+      const p = this.projectField25D(position.x, position.y)
+      const shadow = this.add.ellipse(p.x, p.y + 26 * p.scale, 76 * p.scale, 18 * p.scale, 0x17354b, 0.2).setDepth(p.y - 2)
+      const ring = this.add
+        .ellipse(p.x, p.y, 96 * p.scale, 54 * p.scale, 0xffffff, 0)
+        .setStrokeStyle(4, parseColor('#fff8ef'), 0.32)
+        .setDepth(p.y - 1)
+      const icon = this.add
+        .image(p.x, p.y - 20 * p.scale, ECO_TEXTURES[def.id])
+        .setDisplaySize(70 * p.scale, 70 * p.scale)
+        .setDepth(p.y)
+      const label = this.add
+        .text(p.x, p.y + 40 * p.scale, def.shortLabel, {
+          fontFamily: 'Baloo 2, Nunito, sans-serif',
+          fontSize: '15px',
+          color: '#16324a',
+          backgroundColor: '#fff9e8',
+          padding: { left: 8, right: 8, top: 3, bottom: 3 },
+        })
+        .setOrigin(0.5)
+        .setDepth(p.y + 2)
+
+      const station: Field25DStationState = {
+        def,
+        fieldX: position.x,
+        fieldY: position.y,
+        placed: false,
+        shadow,
+        ring,
+        icon,
+        label,
+        spinners: [],
+        pulses: [],
+        orbiters: [],
+        phase: Phaser.Math.FloatBetween(0, Math.PI * 2),
+      }
+
+      this.createField25DStationMotion(station)
+      icon.setInteractive({ useHandCursor: true })
+      icon.on('pointerdown', (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event?.stopPropagation?.()
+        this.focusField25DStation(station)
+      })
+
+      return station
+    })
+  }
+
+  private createField25DStationMotion(station: Field25DStationState): void {
+    if (station.def.id === 'wind-turbines') {
+      station.spinners.push(
+        this.createBladeSpinner(0, 0, 0.54),
+        this.createBladeSpinner(0, 0, 0.46),
+        this.createBladeSpinner(0, 0, 0.38),
+      )
+    }
+
+    if (station.def.id === 'solar-tractor') {
+      station.mover = this.add.image(0, 0, ECO_TEXTURES['solar-tractor']).setDisplaySize(46, 46).setAlpha(0).setDepth(20)
+    }
+
+    if (station.def.zone === 'water' || station.def.zone === 'energy' || station.def.zone === 'farm') {
+      const color = station.def.zone === 'water' ? '#7fd2ff' : station.def.zone === 'energy' ? '#ffe27a' : '#84df9f'
+      for (let i = 0; i < 6; i += 1) {
+        station.pulses.push(this.add.ellipse(0, 0, 9, 12, parseColor(color), 0.16).setDepth(30))
+      }
+    }
+
+    if (station.def.id === 'insect-control' || station.def.id === 'eco-farm') {
+      const texture = station.def.id === 'insect-control' ? ANIMAL_TEXTURES.bee : butterflyTextureKey(0)
+      for (let i = 0; i < 4; i += 1) {
+        station.orbiters.push(this.add.image(0, 0, texture).setDisplaySize(28, 28).setAlpha(0.2).setDepth(30))
+      }
+    }
+  }
+
+  private createField25DAnimals(): void {
+    this.field25DAnimals = FIELD_25D_ANIMALS.map((animal, index) => {
+      const p = this.projectField25D(animal.x, animal.y)
+      const shadow = this.add.ellipse(p.x, p.y + 10 * p.scale, 26 * p.scale, 9 * p.scale, 0x06141f, 0.16).setDepth(p.y - 1)
+      const sprite = this.add
+        .image(p.x, p.y - 12 * p.scale, ANIMAL_TEXTURES[animal.kind])
+        .setDisplaySize(44 * p.scale, 44 * p.scale)
+        .setDepth(p.y)
+
+      return {
+        kind: animal.kind,
+        zone: animal.zone,
+        fieldX: animal.x,
+        fieldY: animal.y,
+        baseX: animal.x,
+        baseY: animal.y,
+        phase: index * 0.9,
+        sprite,
+        shadow,
+        reactUntil: 0,
+      }
+    })
+  }
+
+  private createField25DHud(): void {
+    this.add.rectangle(VIEW_WIDTH / 2, 36, 900, 70, parseColor('#fff8ef'), 0.92).setScrollFactor(0).setDepth(3000)
+      .setStrokeStyle(3, parseColor('#8be0b0'), 0.72)
+    this.add
+      .text(52, 34, 'Campo Magico 2.5D', {
+        fontFamily: 'Baloo 2, Nunito, sans-serif',
+        fontSize: '24px',
+        color: '#16324a',
+      })
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0)
+      .setDepth(3001)
+    this.field25DProgressText = this.add
+      .text(342, 34, 'Soluciones 0 / 9   Puntos 0', {
+        fontFamily: 'Nunito, sans-serif',
+        fontSize: '20px',
+        color: '#28536d',
+      })
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0)
+      .setDepth(3001)
+    this.field25DGuideText = this.add
+      .text(VIEW_WIDTH / 2, VIEW_HEIGHT - 28, '', {
+        fontFamily: 'Nunito, sans-serif',
+        fontSize: '18px',
+        color: '#17354b',
+        backgroundColor: '#fff8ef',
+        padding: { left: 12, right: 12, top: 6, bottom: 6 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(3001)
+  }
+
+  private bindField25DInput(): void {
+    const keyboard = this.input.keyboard
+    if (keyboard) {
+      const mapped = keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,TAB') as Record<string, Phaser.Input.Keyboard.Key>
+      this.keys.W = mapped.W
+      this.keys.A = mapped.A
+      this.keys.S = mapped.S
+      this.keys.D = mapped.D
+      this.keys.UP = mapped.UP
+      this.keys.DOWN = mapped.DOWN
+      this.keys.LEFT = mapped.LEFT
+      this.keys.RIGHT = mapped.RIGHT
+      this.keys.SPACE = mapped.SPACE
+      this.keys.TAB = mapped.TAB
+    }
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {
+      if (this.field25DDialog || gameObjects.length > 0) {
+        return
+      }
+
+      const worldPoint = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
+      const station = this.findField25DStationAtScreen(worldPoint.x, worldPoint.y)
+      if (station) {
+        this.focusField25DStation(station)
+        return
+      }
+
+      const fieldPoint = this.screenToField25D(worldPoint.x, worldPoint.y)
+      this.getActiveField25DActor().target = fieldPoint
+      this.updateField25DGuide('Camina por el campo y busca las maquinas ecologicas que se mueven.')
+    })
+  }
+
+  private updateField25DControls(delta: number): void {
+    if (!this.keys.SPACE || !this.keys.TAB) {
+      return
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.TAB)) {
+      this.field25DActiveRole = this.field25DActiveRole === 'cat' ? 'dog' : 'cat'
+      this.getActiveField25DActor().celebrateUntil = this.time.now + 350
+      this.updateField25DGuide(this.field25DActiveRole === 'cat' ? 'Controlas a Gato.' : 'Controlas a Perro.')
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE) && this.field25DCurrentStation) {
+      this.focusField25DStation(this.field25DCurrentStation)
+    }
+
+    const actor = this.getActiveField25DActor()
+    const input = new Phaser.Math.Vector2()
+    if (this.keys.W?.isDown || this.keys.UP?.isDown) input.y -= 1
+    if (this.keys.S?.isDown || this.keys.DOWN?.isDown) input.y += 1
+    if (this.keys.A?.isDown || this.keys.LEFT?.isDown) input.x -= 1
+    if (this.keys.D?.isDown || this.keys.RIGHT?.isDown) input.x += 1
+
+    if (input.lengthSq() > 0) {
+      input.normalize()
+      actor.target = null
+      this.moveField25DActor(actor, input.x * 225 * delta, input.y * 190 * delta)
+    }
+  }
+
+  private updateField25DActor(actor: Field25DActorState, delta: number): void {
+    let velocityX = 0
+    let velocityY = 0
+    if (actor.target) {
+      const dx = actor.target.x - actor.fieldX
+      const dy = actor.target.y - actor.fieldY
+      const distance = Math.hypot(dx, dy)
+      if (distance < 10) {
+        actor.target = null
+      } else {
+        const speed = actor.role === 'cat' ? 215 : 195
+        velocityX = (dx / distance) * speed * delta
+        velocityY = (dy / distance) * speed * delta
+        this.moveField25DActor(actor, velocityX, velocityY)
+      }
+    }
+
+    if (Math.abs(velocityX) > 0.1 || Math.abs(velocityY) > 0.1) {
+      actor.pose = this.time.now % 260 < 130 ? 'walk-a' : 'walk-b'
+      actor.direction = Math.abs(velocityX) > Math.abs(velocityY) ? (velocityX < 0 ? 'left' : 'right') : velocityY < 0 ? 'up' : 'down'
+    } else if (this.time.now < actor.celebrateUntil) {
+      actor.pose = 'happy'
+    } else {
+      actor.pose = 'idle'
+    }
+
+    const p = this.projectField25D(actor.fieldX, actor.fieldY)
+    const active = actor.role === this.field25DActiveRole
+    const bob = actor.pose === 'walk-a' || actor.pose === 'walk-b' ? Math.sin(this.time.now * 0.028) * 3 * p.scale : 0
+    actor.shadow
+      .setPosition(p.x, p.y + 18 * p.scale)
+      .setDisplaySize(36 * p.scale, 13 * p.scale)
+      .setDepth(p.y - 1)
+    actor.sprite
+      .setPosition(p.x, p.y - 27 * p.scale + bob)
+      .setDisplaySize((active ? 78 : 70) * p.scale, (active ? 78 : 70) * p.scale)
+      .setDepth(p.y + 8)
+      .setTint(active ? 0xffffff : 0xe9f4ff)
+    applyGuardianArt(actor.sprite, actor.role, actor.direction, actor.pose)
+  }
+
+  private updateField25DFollower(delta: number): void {
+    const leader = this.field25DActiveRole === 'cat' ? this.field25DCat : this.field25DDog
+    const follower = this.field25DActiveRole === 'cat' ? this.field25DDog : this.field25DCat
+    if (follower.target) {
+      return
+    }
+
+    const dx = leader.fieldX - follower.fieldX
+    const dy = leader.fieldY - follower.fieldY
+    const distance = Math.hypot(dx, dy)
+    if (distance > 72) {
+      this.moveField25DActor(follower, (dx / distance) * 145 * delta, (dy / distance) * 126 * delta)
+    }
+  }
+
+  private moveField25DActor(actor: Field25DActorState, dx: number, dy: number): void {
+    actor.fieldX = Phaser.Math.Clamp(actor.fieldX + dx, FIELD_25D_BOUNDS.minX, FIELD_25D_BOUNDS.maxX)
+    actor.fieldY = Phaser.Math.Clamp(actor.fieldY + dy, FIELD_25D_BOUNDS.minY, FIELD_25D_BOUNDS.maxY)
+  }
+
+  private updateField25DStations(delta: number): void {
+    for (const station of this.field25DStations) {
+      station.phase += delta
+      const p = this.projectField25D(station.fieldX, station.fieldY)
+      const active = station.placed
+      const isCurrent = this.field25DCurrentStation?.def.id === station.def.id
+      const pulse = Math.sin(this.time.now * 0.005 + station.phase)
+      const depth = p.y + 3
+      station.shadow.setPosition(p.x, p.y + 26 * p.scale).setDisplaySize(76 * p.scale, 18 * p.scale).setDepth(depth - 3)
+      station.ring
+        .setPosition(p.x, p.y + 4 * p.scale)
+        .setDisplaySize((active ? 114 : isCurrent ? 106 : 96) * p.scale, (active ? 64 : 54) * p.scale)
+        .setStrokeStyle(4, parseColor(active ? '#84df9f' : isCurrent ? '#ffd66d' : '#fff8ef'), active ? 0.76 : isCurrent ? 0.62 : 0.28)
+        .setDepth(depth - 2)
+      station.icon
+        .setPosition(p.x, p.y - 20 * p.scale + pulse * 3 * p.scale)
+        .setDisplaySize((active ? 82 : 72) * p.scale, (active ? 82 : 72) * p.scale)
+        .setDepth(depth)
+        .setTint(active ? 0xffffff : 0xeef7ef)
+      station.label.setPosition(p.x, p.y + 43 * p.scale).setDepth(depth + 4).setAlpha(active || isCurrent ? 1 : 0.74)
+
+      station.spinners.forEach((spinner, index) => {
+        const offsets = [-32, 0, 31]
+        spinner
+          .setPosition(p.x + offsets[index] * p.scale, p.y - (52 - index * 6) * p.scale)
+          .setScale((0.45 + index * 0.06) * p.scale)
+          .setDepth(depth + 6)
+          .setAlpha(active ? 0.96 : 0.38)
+        spinner.rotation += delta * (active ? 6 + index : 1.4)
+      })
+
+      station.pulses.forEach((pulseShape, index) => {
+        const beat = (Math.sin(this.time.now * 0.008 + index * 0.9 + station.phase) + 1) * 0.5
+        const px = p.x - 52 * p.scale + (index % 3) * 52 * p.scale
+        const py = p.y + (index < 3 ? 8 : 30) * p.scale - beat * 18 * p.scale
+        const color = station.def.zone === 'water' ? '#7fd2ff' : station.def.zone === 'energy' ? '#ffe27a' : '#84df9f'
+        pulseShape
+          .setPosition(px, py)
+          .setDisplaySize((7 + beat * 10) * p.scale, (7 + beat * 10) * p.scale)
+          .setFillStyle(parseColor(color), (active ? 0.2 : 0.06) + beat * (active ? 0.44 : 0.12))
+          .setDepth(depth + 8)
+      })
+
+      station.orbiters.forEach((orbiter, index) => {
+        const angle = this.time.now * (active ? 0.0032 : 0.0012) + index * Math.PI * 0.5
+        orbiter
+          .setPosition(p.x + Math.cos(angle) * 54 * p.scale, p.y - 20 * p.scale + Math.sin(angle) * 30 * p.scale)
+          .setDisplaySize(26 * p.scale, 26 * p.scale)
+          .setAlpha(active ? 0.92 : 0.22)
+          .setDepth(depth + 10)
+      })
+
+      if (station.mover) {
+        if (active) {
+          const phase = (this.time.now * 0.00018 + station.phase * 0.08) % 1
+          station.mover
+            .setPosition(p.x - 90 * p.scale + phase * 180 * p.scale, p.y + 64 * p.scale + Math.sin(phase * Math.PI * 2) * 10 * p.scale)
+            .setDisplaySize(44 * p.scale, 44 * p.scale)
+            .setDepth(depth + 12)
+            .setAlpha(0.92)
+            .setFlipX(phase > 0.5)
+        } else {
+          station.mover.setAlpha(0)
+        }
+      }
+    }
+  }
+
+  private updateField25DAnimals(delta: number): void {
+    for (const animal of this.field25DAnimals) {
+      const zoneProgress = this.getZoneProgress(animal.zone)
+      const dancing = this.time.now < animal.reactUntil
+      animal.phase += delta * (0.8 + zoneProgress)
+      animal.fieldX = animal.baseX + Math.sin(animal.phase * 1.4) * (dancing ? 26 : 10 + zoneProgress * 9)
+      animal.fieldY = animal.baseY + Math.cos(animal.phase * 1.2) * (dancing ? 18 : 8 + zoneProgress * 6)
+      const p = this.projectField25D(animal.fieldX, animal.fieldY)
+      const hop = dancing ? Math.abs(Math.sin(this.time.now * 0.024)) * 9 * p.scale : Math.sin(animal.phase) * 2 * p.scale
+      animal.shadow.setPosition(p.x, p.y + 10 * p.scale).setDisplaySize(26 * p.scale, 9 * p.scale).setDepth(p.y - 1)
+      animal.sprite
+        .setPosition(p.x, p.y - 12 * p.scale - hop)
+        .setDisplaySize((42 + zoneProgress * 10) * p.scale, (42 + zoneProgress * 10) * p.scale)
+        .setDepth(p.y + 3)
+        .setAlpha(0.72 + zoneProgress * 0.28)
+        .setScale(animal.kind === 'bee' && Math.sin(animal.phase) < 0 ? -Math.abs(animal.sprite.scaleX) : Math.abs(animal.sprite.scaleX), animal.sprite.scaleY)
+    }
+  }
+
+  private updateField25DCurrentStation(): void {
+    const actor = this.getActiveField25DActor()
+    this.field25DCurrentStation =
+      this.field25DStations.find((station) => !station.placed && Phaser.Math.Distance.Between(actor.fieldX, actor.fieldY, station.fieldX, station.fieldY) < 82) ?? null
+
+    if (this.field25DCurrentStation) {
+      this.updateField25DGuide(`ESPACIO: ${this.field25DCurrentStation.def.label}`)
+    }
+  }
+
+  private updateField25DHud(): void {
+    this.field25DProgressText.setText(`Soluciones ${this.completedTaskIds.size} / 9   Puntos ${this.field25DScore}`)
+  }
+
+  private focusField25DStation(station: Field25DStationState): void {
+    const actor = this.getActiveField25DActor()
+    const distance = Phaser.Math.Distance.Between(actor.fieldX, actor.fieldY, station.fieldX, station.fieldY)
+    if (distance > 88) {
+      actor.target = new Phaser.Math.Vector2(station.fieldX, station.fieldY + 42)
+      this.updateField25DGuide(`Ve hacia ${station.def.shortLabel}. Cuando estes cerca pulsa ESPACIO.`)
+      return
+    }
+
+    this.openField25DDialog(station)
+  }
+
+  private openField25DDialog(station: Field25DStationState): void {
+    if (station.placed) {
+      this.updateField25DGuide(`${station.def.shortLabel} ya esta activado.`)
+      return
+    }
+
+    this.field25DDialog?.destroy()
+    const shade = this.add.rectangle(VIEW_WIDTH / 2, VIEW_HEIGHT / 2, VIEW_WIDTH, VIEW_HEIGHT, 0x123344, 0.38).setScrollFactor(0)
+    const panel = this.add.rectangle(VIEW_WIDTH / 2, VIEW_HEIGHT / 2, 700, 342, parseColor('#fff8ef'), 0.96)
+      .setStrokeStyle(5, parseColor('#84df9f'), 0.82)
+    const icon = this.add.image(VIEW_WIDTH / 2 - 250, VIEW_HEIGHT / 2 - 34, ECO_TEXTURES[station.def.id]).setDisplaySize(132, 132)
+    const title = this.add.text(VIEW_WIDTH / 2 - 146, VIEW_HEIGHT / 2 - 122, station.def.label, {
+      fontFamily: 'Baloo 2, Nunito, sans-serif',
+      fontSize: '34px',
+      color: '#16324a',
+      wordWrap: { width: 420 },
+    })
+    const body = this.add.text(VIEW_WIDTH / 2 - 146, VIEW_HEIGHT / 2 - 54, station.def.description, {
+      fontFamily: 'Nunito, sans-serif',
+      fontSize: '23px',
+      color: '#28536d',
+      wordWrap: { width: 430 },
+      lineSpacing: 8,
+    })
+    const quote = this.add.text(VIEW_WIDTH / 2 - 146, VIEW_HEIGHT / 2 + 42, station.def.voiceLine, {
+      fontFamily: 'Nunito, sans-serif',
+      fontSize: '22px',
+      color: '#3d5e47',
+      fontStyle: 'italic',
+      wordWrap: { width: 430 },
+    })
+    const button = this.add.rectangle(VIEW_WIDTH / 2, VIEW_HEIGHT / 2 + 124, 280, 60, parseColor('#ffd66d'), 1)
+      .setStrokeStyle(4, parseColor('#ffffff'), 0.92)
+    const buttonText = this.add.text(VIEW_WIDTH / 2, VIEW_HEIGHT / 2 + 124, station.def.buttonLabel, {
+      fontFamily: 'Baloo 2, Nunito, sans-serif',
+      fontSize: '25px',
+      color: '#16324a',
+    }).setOrigin(0.5)
+    const hit = this.add.rectangle(VIEW_WIDTH / 2, VIEW_HEIGHT / 2 + 124, 280, 60, 0x000000, 0.001).setInteractive({ useHandCursor: true })
+    hit.on('pointerdown', () => this.completeField25DStation(station))
+    this.field25DDialog = this.add.container(0, 0, [shade, panel, icon, title, body, quote, button, buttonText, hit])
+      .setScrollFactor(0)
+      .setDepth(4000)
+  }
+
+  private completeField25DStation(station: Field25DStationState): void {
+    if (station.placed) {
+      this.field25DDialog?.destroy()
+      this.field25DDialog = null
+      return
+    }
+
+    station.placed = true
+    this.completedTaskIds.add(station.def.id)
+    this.zoneProgress[station.def.zone] += 1
+    this.field25DScore += 10
+    this.field25DDialog?.destroy()
+    this.field25DDialog = null
+    this.field25DCat.celebrateUntil = this.time.now + 1600
+    this.field25DDog.celebrateUntil = this.time.now + 1600
+    this.updateField25DGuide(station.def.celebration)
+    const burstPoint = this.projectField25D(station.fieldX, station.fieldY)
+    this.emitMagicBurst(burstPoint.x, burstPoint.y, '#84df9f')
+
+    for (const animal of this.field25DAnimals) {
+      if (animal.zone === station.def.zone || Phaser.Math.Distance.Between(animal.baseX, animal.baseY, station.fieldX, station.fieldY) < 210) {
+        animal.reactUntil = this.time.now + 2100
+      }
+    }
+
+    this.redrawField25DWorld()
+    this.cameras.main.flash(150, 255, 246, 180, false)
+    this.cameras.main.shake(120, 0.0022)
+
+    if (this.completedTaskIds.size >= TASKS.length) {
+      this.time.delayedCall(1200, () => {
+        this.scene.start(WIN_SCENE_KEY, {
+          completedCount: TASKS.length,
+          score: this.field25DScore,
+        } satisfies WinSceneData)
+      })
+    }
+  }
+
+  private findField25DStationAtScreen(x: number, y: number): Field25DStationState | null {
+    return this.field25DStations.find((station) => {
+      const p = this.projectField25D(station.fieldX, station.fieldY)
+      return Phaser.Math.Distance.Between(x, y, p.x, p.y) < 54 * p.scale
+    }) ?? null
+  }
+
+  private getActiveField25DActor(): Field25DActorState {
+    return this.field25DActiveRole === 'cat' ? this.field25DCat : this.field25DDog
+  }
+
+  private updateField25DGuide(text: string): void {
+    this.field25DGuideText?.setText(text)
+  }
+
+  private projectField25D(fieldX: number, fieldY: number): Field25DProjection {
+    const x = VIEW_WIDTH / 2 + (fieldX - 600) * 0.78
+    const y = 120 + fieldY * 0.52
+    const depth = Phaser.Math.Clamp((fieldY - FIELD_25D_BOUNDS.minY) / (FIELD_25D_BOUNDS.maxY - FIELD_25D_BOUNDS.minY), 0, 1)
+    return {
+      x,
+      y,
+      scale: 0.58 + depth * 0.54,
+    }
+  }
+
+  private screenToField25D(screenX: number, screenY: number): Phaser.Math.Vector2 {
+    return new Phaser.Math.Vector2(
+      Phaser.Math.Clamp((screenX - VIEW_WIDTH / 2) / 0.78 + 600, FIELD_25D_BOUNDS.minX, FIELD_25D_BOUNDS.maxX),
+      Phaser.Math.Clamp((screenY - 120) / 0.52, FIELD_25D_BOUNDS.minY, FIELD_25D_BOUNDS.maxY),
+    )
   }
 
   private createWorldLayers(): void {
