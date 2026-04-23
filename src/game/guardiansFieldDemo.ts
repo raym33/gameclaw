@@ -844,8 +844,13 @@ class GuardiansFarmScene extends GuardiansBaseScene {
     this.cameras.main.setZoom(1)
     this.cameras.main.setRoundPixels(true)
 
-    this.field25DGround = this.add.graphics().setDepth(-40)
-    this.field25DDecor = this.add.graphics().setDepth(-8)
+    this.add
+      .image(VIEW_WIDTH / 2, VIEW_HEIGHT / 2, GUARDIANS_TEXTURES.background)
+      .setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT)
+      .setAlpha(0.38)
+      .setDepth(0)
+    this.field25DGround = this.add.graphics().setDepth(1)
+    this.field25DDecor = this.add.graphics().setDepth(20)
     this.field25DFront = this.add.graphics().setDepth(2000)
     this.redrawField25DWorld()
     this.createField25DStations()
