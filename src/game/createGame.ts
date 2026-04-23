@@ -148,6 +148,7 @@ type SlingshotState = {
   projectile: MatterShape | null
   projectileLaunched: boolean
   dragging: boolean
+  dragPointerId: number | null
   shotsRemaining: number
   blocks: SlingshotBlock[]
   targets: SlingshotTarget[]
@@ -173,6 +174,13 @@ const SLINGSHOT_MATERIAL_STATS: Record<
   glass: { density: 0.0011, integrity: 4.8, damageScale: 1.35, particleColor: '#82d8d0' },
   brass: { density: 0.0028, integrity: 11.8, damageScale: 0.42, particleColor: '#f0a949' },
 }
+
+const SLINGSHOT_MAX_PULL = 128
+const SLINGSHOT_VERTICAL_PULL = 104
+const SLINGSHOT_DRAG_RADIUS = 38
+const SLINGSHOT_ANCHOR_GRAB_RADIUS = 54
+const SLINGSHOT_RELEASE_MIN_PULL = 16
+const MATTER_BASE_DELTA = 1000 / 60
 
 const SLINGSHOT_LEVELS: SlingshotLevel[] = [
   {
@@ -374,6 +382,8 @@ class GeneratedGameScene extends Phaser.Scene {
       this.input.off('pointerdown', this.handlePointerDown, this)
       this.input.off('pointermove', this.handlePointerMove, this)
       this.input.off('pointerup', this.handlePointerUp, this)
+      this.input.off('pointerupoutside', this.handlePointerUp, this)
+      this.input.off('gameout', this.handlePointerLeaveGame, this)
       if (this.runtimeProfile === 'slingshot-destruction') {
         this.matter.world.off('collisionstart', this.handleSlingshotCollision, this)
       }
@@ -823,6 +833,7 @@ class GeneratedGameScene extends Phaser.Scene {
       projectile: null,
       projectileLaunched: false,
       dragging: false,
+      dragPointerId: null,
       shotsRemaining: 0,
       blocks: [],
       targets: [],
@@ -877,6 +888,8 @@ class GeneratedGameScene extends Phaser.Scene {
     this.input.on('pointerdown', this.handlePointerDown, this)
     this.input.on('pointermove', this.handlePointerMove, this)
     this.input.on('pointerup', this.handlePointerUp, this)
+    this.input.on('pointerupoutside', this.handlePointerUp, this)
+    this.input.on('gameout', this.handlePointerLeaveGame, this)
     this.matter.world.on('collisionstart', this.handleSlingshotCollision, this)
   }
 
@@ -1478,6 +1491,7 @@ class GeneratedGameScene extends Phaser.Scene {
     this.slingshot.projectile = null
     this.slingshot.projectileLaunched = false
     this.slingshot.dragging = false
+    this.slingshot.dragPointerId = null
   }
 
   private spawnSlingshotProjectile(): void {
@@ -1508,12 +1522,19 @@ class GeneratedGameScene extends Phaser.Scene {
     matterProjectile.glow = this.createSlingshotGlow(this.slingshot.anchor.x, this.slingshot.anchor.y, 62, this.blueprint.palette.accent)
     this.slingshot.projectile = matterProjectile
     this.slingshot.projectileLaunched = false
+    this.slingshot.dragPointerId = null
     this.slingshot.elasticSnap = null
+    this.slingshot.lastTrailAt = 0
     this.slingshot.shotsRemaining -= 1
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
-    if (!this.slingshot?.projectile) {
+    if (
+      !this.slingshot?.projectile ||
+      this.slingshot.projectileLaunched ||
+      this.slingshot.transitioning ||
+      !pointer.leftButtonDown()
+    ) {
       return
     }
 
@@ -1531,9 +1552,12 @@ class GeneratedGameScene extends Phaser.Scene {
       this.slingshot.anchor.x,
       this.slingshot.anchor.y,
     )
+    const projectileAtRest =
+      Phaser.Math.Distance.Between(projectile.x, projectile.y, this.slingshot.anchor.x, this.slingshot.anchor.y) < 14
 
-    if (projectileDistance <= 86 || anchorDistance <= 118) {
+    if (projectileDistance <= SLINGSHOT_DRAG_RADIUS || (projectileAtRest && anchorDistance <= SLINGSHOT_ANCHOR_GRAB_RADIUS)) {
       this.slingshot.dragging = true
+      this.slingshot.dragPointerId = pointer.id
       this.matter.body.setVelocity(projectile.body, { x: 0, y: 0 })
       this.matter.body.setAngularVelocity(projectile.body, 0)
       this.matter.body.setStatic(projectile.body, true)
@@ -1542,7 +1566,12 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
-    if (!this.slingshot?.dragging || !this.slingshot.projectile) {
+    if (
+      !this.slingshot?.dragging ||
+      !this.slingshot.projectile ||
+      this.slingshot.dragPointerId === null ||
+      pointer.id !== this.slingshot.dragPointerId
+    ) {
       return
     }
 
@@ -1550,7 +1579,19 @@ class GeneratedGameScene extends Phaser.Scene {
     this.setSlingshotProjectilePull(pointerPosition.x, pointerPosition.y)
   }
 
-  private handlePointerUp(): void {
+  private handlePointerUp(pointer?: Phaser.Input.Pointer): void {
+    if (
+      !this.slingshot?.dragging ||
+      !this.slingshot.projectile ||
+      (pointer && this.slingshot.dragPointerId !== null && pointer.id !== this.slingshot.dragPointerId)
+    ) {
+      return
+    }
+
+    this.releaseSlingshotProjectile()
+  }
+
+  private handlePointerLeaveGame(): void {
     if (!this.slingshot?.dragging || !this.slingshot.projectile) {
       return
     }
@@ -1596,14 +1637,23 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    const maxDistance = 128
-    const constrainedX = Math.min(x, this.slingshot.anchor.x - 2)
+    const constrainedX = Math.min(x, this.slingshot.anchor.x - 6)
+    const constrainedY = Phaser.Math.Clamp(
+      y,
+      this.slingshot.anchor.y - SLINGSHOT_VERTICAL_PULL,
+      this.slingshot.anchor.y + SLINGSHOT_VERTICAL_PULL,
+    )
     const offsetX = constrainedX - this.slingshot.anchor.x
-    const offsetY = y - this.slingshot.anchor.y
+    const offsetY = constrainedY - this.slingshot.anchor.y
     const vector = new Phaser.Math.Vector2(offsetX, offsetY)
 
-    if (vector.length() > maxDistance) {
-      vector.normalize().scale(maxDistance)
+    const ellipseLength = Math.sqrt(
+      (vector.x * vector.x) / (SLINGSHOT_MAX_PULL * SLINGSHOT_MAX_PULL) +
+        (vector.y * vector.y) / (SLINGSHOT_VERTICAL_PULL * SLINGSHOT_VERTICAL_PULL),
+    )
+
+    if (ellipseLength > 1) {
+      vector.scale(1 / ellipseLength)
     }
 
     this.matter.body.setPosition(this.slingshot.projectile.body, {
@@ -1621,9 +1671,10 @@ class GeneratedGameScene extends Phaser.Scene {
     const pull = this.calculateSlingshotPull(projectile)
 
     this.slingshot.dragging = false
+    this.slingshot.dragPointerId = null
 
-    if (pull.length() < 14) {
-      this.matter.body.setPosition(projectile.body, this.slingshot.anchor)
+    if (pull.length() < SLINGSHOT_RELEASE_MIN_PULL) {
+      this.resetSlingshotProjectileToAnchor()
       return
     }
 
@@ -1638,13 +1689,24 @@ class GeneratedGameScene extends Phaser.Scene {
 
     this.matter.body.setStatic(projectile.body, false)
     this.matter.body.setVelocity(projectile.body, { x: velocity.x, y: velocity.y })
-    this.matter.body.setAngularVelocity(projectile.body, Phaser.Math.Clamp(velocity.x * 0.003, -0.18, 0.18))
+    this.matter.body.setAngularVelocity(projectile.body, Phaser.Math.Clamp(velocity.length() * 0.0032, -0.22, 0.22))
     this.emitImpactBurst(projectile.x, projectile.y, this.blueprint.palette.accent, 12, 42)
     this.cameras.main.shake(70, 0.0025)
   }
 
+  private resetSlingshotProjectileToAnchor(): void {
+    if (!this.slingshot?.projectile) {
+      return
+    }
+
+    this.matter.body.setVelocity(this.slingshot.projectile.body, { x: 0, y: 0 })
+    this.matter.body.setAngularVelocity(this.slingshot.projectile.body, 0)
+    this.matter.body.setPosition(this.slingshot.projectile.body, this.slingshot.anchor)
+  }
+
   private getPointerGamePosition(pointer: Phaser.Input.Pointer): Phaser.Math.Vector2 {
-    return pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
+    pointer.updateWorldPoint(this.cameras.main)
+    return new Phaser.Math.Vector2(pointer.worldX, pointer.worldY)
   }
 
   private calculateSlingshotPull(projectile: MatterShape): Phaser.Math.Vector2 {
@@ -1655,7 +1717,10 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private calculateSlingshotLaunchVelocity(projectile: MatterShape): Phaser.Math.Vector2 {
-    return this.calculateSlingshotPull(projectile).scale(this.blueprint.physics.projectilePower / 30)
+    const pull = this.calculateSlingshotPull(projectile)
+    const tension = Phaser.Math.Clamp(pull.length() / SLINGSHOT_MAX_PULL, 0, 1)
+    const springFactor = Phaser.Math.Linear(0.82, 1.12, Math.pow(tension, 0.72))
+    return pull.scale((this.blueprint.physics.projectilePower / 30) * springFactor)
   }
 
   private drawSlingshotFrame(): void {
@@ -1750,7 +1815,7 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    const tension = Phaser.Math.Clamp(pull.length() / 110, 0, 1)
+    const tension = Phaser.Math.Clamp(pull.length() / SLINGSHOT_MAX_PULL, 0, 1)
     this.drawSlingshotPowerMeter(tension)
     this.drawElasticBand(forkTop, projectile, 5, this.blueprint.palette.accent, 0.6, tension, 0)
     this.drawElasticBand(forkBottom, projectile, 4, this.blueprint.palette.accentAlt, 0.62, tension, Math.PI * 0.8)
@@ -1853,31 +1918,50 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    const velocity = this.calculateSlingshotLaunchVelocity(projectile)
-    let x = projectile.x
-    let y = projectile.y
-    let vx = velocity.x
-    let vy = velocity.y
-    const gravityPerStep = this.blueprint.physics.gravity
-    const drag = Phaser.Math.Clamp(this.blueprint.physics.drag, 0, 0.08)
+    const predictedPoints = this.predictSlingshotTrajectory(projectile)
 
-    for (let i = 1; i <= 28; i += 1) {
-      for (let substep = 0; substep < 2; substep += 1) {
-        x += vx
-        y += vy
-        vx *= 1 - drag
-        vy = vy * (1 - drag) + gravityPerStep
-      }
-
-      if (x < 0 || x > GAME_WIDTH || y < 0 || y > GAME_HEIGHT - 68) {
+    for (let i = 0; i < predictedPoints.length; i += 1) {
+      const point = predictedPoints[i]
+      const alpha = 0.46 - i * 0.012
+      if (alpha <= 0.04) {
         break
       }
 
       this.slingshot.dragGuide.fillStyle(parseColor('#020507'), 0.2 - i * 0.004)
-      this.slingshot.dragGuide.fillCircle(x + 2, y + 2, Math.max(2, 6 - i * 0.13))
-      this.slingshot.dragGuide.fillStyle(parseColor(this.blueprint.palette.accent), 0.46 - i * 0.012)
-      this.slingshot.dragGuide.fillCircle(x, y, Math.max(2, 6 - i * 0.13))
+      this.slingshot.dragGuide.fillCircle(point.x + 2, point.y + 2, Math.max(2, 6 - i * 0.13))
+      this.slingshot.dragGuide.fillStyle(parseColor(this.blueprint.palette.accent), alpha)
+      this.slingshot.dragGuide.fillCircle(point.x, point.y, Math.max(2, 6 - i * 0.13))
     }
+  }
+
+  private predictSlingshotTrajectory(projectile: MatterShape): Array<{ x: number; y: number }> {
+    const velocity = this.calculateSlingshotLaunchVelocity(projectile)
+    const gravity = this.matter.world.engine.gravity
+    const deltaTime = (projectile.body.deltaTime || MATTER_BASE_DELTA) * (projectile.body.timeScale || 1)
+    const frictionAir = Phaser.Math.Clamp(1 - projectile.body.frictionAir * (deltaTime / MATTER_BASE_DELTA), 0, 1)
+    const gravityScale = typeof gravity.scale === 'number' ? gravity.scale : 0.001
+    const gravityStepX = gravity.x * gravityScale * deltaTime * deltaTime
+    const gravityStepY = gravity.y * gravityScale * deltaTime * deltaTime
+    const points: Array<{ x: number; y: number }> = []
+    let x = projectile.x
+    let y = projectile.y
+    let vx = velocity.x
+    let vy = velocity.y
+
+    for (let step = 0; step < 32; step += 1) {
+      vx = vx * frictionAir + gravityStepX
+      vy = vy * frictionAir + gravityStepY
+      x += vx
+      y += vy
+
+      if (x < -40 || x > GAME_WIDTH + 40 || y < -20 || y > GAME_HEIGHT - 66) {
+        break
+      }
+
+      points.push({ x, y })
+    }
+
+    return points
   }
 
   private syncSlingshotHero(): void {
@@ -1906,7 +1990,7 @@ class GeneratedGameScene extends Phaser.Scene {
     const pullOffsetX = Phaser.Math.Clamp((projectile.x - this.slingshot.anchor.x) * 0.34, -42, 18)
     const pullOffsetY = Phaser.Math.Clamp((projectile.y - this.slingshot.anchor.y) * 0.12, -10, 14)
     const pullAmount = Phaser.Math.Clamp(
-      Phaser.Math.Distance.Between(projectile.x, projectile.y, this.slingshot.anchor.x, this.slingshot.anchor.y) / 110,
+      Phaser.Math.Distance.Between(projectile.x, projectile.y, this.slingshot.anchor.x, this.slingshot.anchor.y) / SLINGSHOT_MAX_PULL,
       0,
       1,
     )
@@ -2145,12 +2229,25 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private syncAttachedArt(shape: MatterShape, depth: number, alpha: number): void {
+    const glowPulse = 1 + Math.sin((this.time.now + shape.x * 0.35) * 0.01) * 0.06 + Math.min(0.18, shape.body.speed * 0.012)
+    const glowAlpha =
+      shape.body.label === 'gameclaw-projectile'
+        ? 0.22 + Math.min(0.3, shape.body.speed * 0.012)
+        : shape.body.label === 'gameclaw-target'
+          ? 0.16 + Math.sin((this.time.now + shape.y) * 0.008) * 0.04
+          : 0.08
+
     shape.art?.setPosition(shape.x, shape.y).setRotation(shape.rotation).setDepth(depth).setAlpha(alpha)
     shape.shadow
       ?.setPosition(shape.x, GAME_HEIGHT - 66)
       .setScale(Phaser.Math.Clamp(1 - Math.max(0, GAME_HEIGHT - 80 - shape.y) * 0.0022, 0.34, 1.05), 1)
       .setDepth(depth - 2)
-    shape.glow?.setPosition(shape.x, shape.y).setRotation(shape.rotation).setDepth(depth - 1)
+    shape.glow
+      ?.setPosition(shape.x, shape.y)
+      .setRotation(shape.rotation)
+      .setScale(glowPulse)
+      .setAlpha(glowAlpha)
+      .setDepth(depth - 1)
   }
 
   private prepareAstralCutoutTextures(): void {
