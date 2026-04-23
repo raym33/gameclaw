@@ -3,7 +3,7 @@ import astralBackgroundUrl from '../assets/astral-orchard/background-concept.png
 import astralBrassBeamUrl from '../assets/astral-orchard/brass-beam.png'
 import astralGlassPillarUrl from '../assets/astral-orchard/glass-pillar.png'
 import astralOrbitCoreUrl from '../assets/astral-orchard/orbit-core.png'
-import astralOriginalSpriteSheetUrl from '../assets/astral-orchard/original-sprite-sheet.png'
+import astralHeroMotionSheetUrl from '../assets/astral-orchard/hero-motion-sheet-v2.png'
 import astralStarSeedUrl from '../assets/astral-orchard/star-seed.png'
 import astralWoodBeamUrl from '../assets/astral-orchard/wood-beam.png'
 import astralWoodSupportUrl from '../assets/astral-orchard/wood-support.png'
@@ -69,26 +69,38 @@ const ASTRAL_CUTOUT_TEXTURES = {
 } as const
 
 const ASTRAL_HERO_SPRITES = {
-  idle: 'astral-hero-sprite-idle',
-  walk: 'astral-hero-sprite-walk',
-  pull: 'astral-hero-sprite-pull',
+  idleA: 'astral-hero-sprite-idle-a',
+  idleB: 'astral-hero-sprite-idle-b',
+  stepA: 'astral-hero-sprite-step-a',
+  stepB: 'astral-hero-sprite-step-b',
+  brace: 'astral-hero-sprite-brace',
+  pullLight: 'astral-hero-sprite-pull-light',
+  pullHeavy: 'astral-hero-sprite-pull-heavy',
   release: 'astral-hero-sprite-release',
 } as const
 
 type AstralHeroPose = keyof typeof ASTRAL_HERO_SPRITES
 
 const ASTRAL_HERO_SOURCE_RECTS: Record<AstralHeroPose, TextureCrop> = {
-  idle: { x: 54, y: 86, width: 242, height: 346 },
-  walk: { x: 362, y: 106, width: 220, height: 336 },
-  pull: { x: 842, y: 146, width: 302, height: 286 },
-  release: { x: 1138, y: 150, width: 350, height: 282 },
+  idleA: { x: 0, y: 120, width: 272, height: 468 },
+  idleB: { x: 272, y: 120, width: 271, height: 468 },
+  stepA: { x: 543, y: 120, width: 271, height: 468 },
+  stepB: { x: 814, y: 120, width: 272, height: 468 },
+  brace: { x: 1086, y: 120, width: 272, height: 468 },
+  pullLight: { x: 1358, y: 120, width: 271, height: 468 },
+  pullHeavy: { x: 1629, y: 120, width: 271, height: 468 },
+  release: { x: 1900, y: 120, width: 272, height: 468 },
 }
 
 const ASTRAL_HERO_DISPLAY: Record<AstralHeroPose, { width: number; height: number; originX: number }> = {
-  idle: { width: 94, height: 134, originX: 0.5 },
-  walk: { width: 90, height: 132, originX: 0.48 },
-  pull: { width: 168, height: 126, originX: 0.34 },
-  release: { width: 196, height: 124, originX: 0.34 },
+  idleA: { width: 78, height: 134, originX: 0.48 },
+  idleB: { width: 78, height: 134, originX: 0.48 },
+  stepA: { width: 78, height: 134, originX: 0.48 },
+  stepB: { width: 78, height: 134, originX: 0.48 },
+  brace: { width: 78, height: 134, originX: 0.47 },
+  pullLight: { width: 78, height: 134, originX: 0.45 },
+  pullHeavy: { width: 78, height: 134, originX: 0.44 },
+  release: { width: 78, height: 134, originX: 0.44 },
 }
 
 type TextureCrop = {
@@ -177,10 +189,11 @@ const SLINGSHOT_MATERIAL_STATS: Record<
 }
 
 const SLINGSHOT_MAX_PULL = 128
-const SLINGSHOT_VERTICAL_PULL = 104
+const SLINGSHOT_VERTICAL_PULL = 98
 const SLINGSHOT_DRAG_RADIUS = 38
 const SLINGSHOT_ANCHOR_GRAB_RADIUS = 54
 const SLINGSHOT_RELEASE_MIN_PULL = 16
+const SLINGSHOT_PROJECTILE_RADIUS = 18
 const MATTER_BASE_DELTA = 1000 / 60
 const SLINGSHOT_CAMERA_IDLE_ZOOM = 1.045
 const SLINGSHOT_CAMERA_DRAG_ZOOM = 1.075
@@ -388,7 +401,7 @@ class GeneratedGameScene extends Phaser.Scene {
     }
 
     this.load.image(ASTRAL_TEXTURES.background, astralBackgroundUrl)
-    this.load.image(ASTRAL_TEXTURES.spriteSheet, astralOriginalSpriteSheetUrl)
+    this.load.image(ASTRAL_TEXTURES.spriteSheet, astralHeroMotionSheetUrl)
     this.load.image(ASTRAL_TEXTURES.projectile, astralStarSeedUrl)
     this.load.image(ASTRAL_TEXTURES.target, astralOrbitCoreUrl)
     this.load.image(ASTRAL_TEXTURES.woodBeam, astralWoodBeamUrl)
@@ -900,7 +913,7 @@ class GeneratedGameScene extends Phaser.Scene {
 
   private createSlingshotDestruction(): void {
     this.slingshot = {
-      anchor: { x: 140, y: GAME_HEIGHT - 120 },
+      anchor: { x: 182, y: GAME_HEIGHT - 134 },
       levelFocus: { x: 696, y: 294 },
       dragGuide: this.add.graphics(),
       projectile: null,
@@ -914,8 +927,8 @@ class GeneratedGameScene extends Phaser.Scene {
       levelIndex: 0,
       levels: SLINGSHOT_LEVELS,
       transitioning: false,
-      heroBase: { x: 156, y: GAME_HEIGHT - 70 },
-      heroPose: 'idle',
+      heroBase: { x: 94, y: GAME_HEIGHT - 72 },
+      heroPose: 'idleA',
       elasticSnap: null,
       lastTrailAt: 0,
       lastStepAt: 0,
@@ -947,10 +960,6 @@ class GeneratedGameScene extends Phaser.Scene {
     ground.setAlpha(0.01)
     const groundBody = this.matter.add.gameObject(ground, { isStatic: true }) as MatterShape
     groundBody.body.label = 'gameclaw-ground'
-    const launcher = this.add.rectangle(120, GAME_HEIGHT - 105, 18, 72, parseColor(this.blueprint.palette.accent))
-    launcher.setAlpha(0.01)
-    const launcherBody = this.matter.add.gameObject(launcher, { isStatic: true }) as MatterShape
-    launcherBody.body.label = 'gameclaw-launcher'
 
     this.drawSlingshotFrame()
     this.slingshot.heroSprite = this.createSlingshotHeroSprite(this.slingshot.heroBase.x, this.slingshot.heroBase.y)
@@ -1666,7 +1675,7 @@ class GeneratedGameScene extends Phaser.Scene {
     const projectile = this.add.circle(
       this.slingshot.anchor.x,
       this.slingshot.anchor.y,
-      18,
+      SLINGSHOT_PROJECTILE_RADIUS,
       parseColor(this.blueprint.palette.accent),
     )
     projectile.setStrokeStyle(3, parseColor(this.blueprint.palette.text), 0.01)
@@ -1901,25 +1910,30 @@ class GeneratedGameScene extends Phaser.Scene {
     const brass = parseColor(this.blueprint.palette.accent)
     const root = parseColor('#2f2118')
     const { x, y } = this.slingshot.anchor
+    const postX = x + 34
+    const postTopY = y - 16
+    const { top: forkTop, bottom: forkBottom } = this.getSlingshotForkPoints()
 
     frame.lineStyle(18, root, 0.34)
-    frame.lineBetween(x - 5, y + 48, x - 2, y - 18)
+    frame.lineBetween(postX, y + 46, postX + 2, postTopY)
     frame.lineStyle(11, wood, 0.94)
-    frame.lineBetween(x - 5, y + 48, x - 2, y - 18)
+    frame.lineBetween(postX, y + 46, postX + 2, postTopY)
     frame.lineStyle(12, wood, 0.94)
-    frame.lineBetween(x - 2, y - 18, x - 24, y - 50)
-    frame.lineBetween(x - 2, y - 18, x + 26, y - 34)
+    frame.lineBetween(postX + 2, postTopY, forkTop.x, forkTop.y)
+    frame.lineBetween(postX + 2, postTopY, forkBottom.x, forkBottom.y)
     frame.lineStyle(3, brass, 0.82)
-    frame.lineBetween(x - 17, y - 42, x - 8, y - 24)
-    frame.lineBetween(x + 16, y - 30, x + 2, y - 20)
+    frame.lineBetween(postX + 6, y - 6, postX - 5, y + 30)
+    frame.lineBetween(forkTop.x + 4, forkTop.y + 7, postX + 5, postTopY - 6)
+    frame.lineBetween(forkBottom.x + 3, forkBottom.y + 3, postX + 8, postTopY - 2)
     frame.fillStyle(brass, 0.74)
-    frame.fillCircle(x - 24, y - 50, 5)
-    frame.fillCircle(x + 26, y - 34, 5)
+    frame.fillCircle(forkTop.x, forkTop.y, 5)
+    frame.fillCircle(forkBottom.x, forkBottom.y, 5)
+    frame.fillCircle(postX + 6, y + 26, 4)
   }
 
   private createSlingshotHeroSprite(x: number, y: number): Phaser.GameObjects.Image {
-    const hero = this.add.image(x, y, ASTRAL_HERO_SPRITES.idle).setDepth(8).setAlpha(0.98)
-    this.applyHeroSpritePose(hero, 'idle')
+    const hero = this.add.image(x, y, ASTRAL_HERO_SPRITES.idleA).setDepth(8).setAlpha(0.98)
+    this.applyHeroSpritePose(hero, 'idleA')
     return hero
   }
 
@@ -1943,10 +1957,14 @@ class GeneratedGameScene extends Phaser.Scene {
 
     const pose = this.slingshot.heroPose
     const offsets: Record<AstralHeroPose, { x: number; y: number }> = {
-      idle: { x: 22, y: -70 },
-      walk: { x: 30, y: -68 },
-      pull: { x: 48, y: -60 },
-      release: { x: 78, y: -64 },
+      idleA: { x: 34, y: -86 },
+      idleB: { x: 34, y: -86 },
+      stepA: { x: 42, y: -86 },
+      stepB: { x: 40, y: -86 },
+      brace: { x: 48, y: -86 },
+      pullLight: { x: 62, y: -88 },
+      pullHeavy: { x: 74, y: -89 },
+      release: { x: 88, y: -90 },
     }
     const offset = offsets[pose]
     const rotation = hero.rotation
@@ -1974,8 +1992,7 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    const forkTop = { x: this.slingshot.anchor.x - 12, y: this.slingshot.anchor.y - 38 }
-    const forkBottom = { x: this.slingshot.anchor.x + 14, y: this.slingshot.anchor.y - 20 }
+    const { top: forkTop, bottom: forkBottom } = this.getSlingshotForkPoints()
     const pull = this.calculateSlingshotPull(projectile)
 
     if (this.slingshot.projectileLaunched) {
@@ -1989,8 +2006,8 @@ class GeneratedGameScene extends Phaser.Scene {
     this.drawElasticBand(forkBottom, projectile, 4, this.blueprint.palette.accentAlt, 0.62, tension, Math.PI * 0.8)
 
     const heldHand = this.getHeroHandPosition()
-    if (heldHand) {
-      this.slingshot.dragGuide.lineStyle(3, parseColor(this.blueprint.palette.accent), 0.38)
+    if (heldHand && tension > 0.14) {
+      this.slingshot.dragGuide.lineStyle(3, parseColor(this.blueprint.palette.accent), 0.18 + tension * 0.28)
       this.slingshot.dragGuide.lineBetween(heldHand.x, heldHand.y, projectile.x, projectile.y)
     }
 
@@ -2004,7 +2021,7 @@ class GeneratedGameScene extends Phaser.Scene {
       return
     }
 
-    const x = this.slingshot.anchor.x - 70
+    const x = this.slingshot.anchor.x - 86
     const y = this.slingshot.anchor.y - 58
     const height = 98
     const fillHeight = height * tension
@@ -2103,6 +2120,7 @@ class GeneratedGameScene extends Phaser.Scene {
   }
 
   private predictSlingshotTrajectory(projectile: MatterShape): Array<{ x: number; y: number }> {
+    const matterLib = Phaser.Physics.Matter.Matter
     const velocity = this.calculateSlingshotLaunchVelocity(projectile)
     const gravity = this.matter.world.engine.gravity
     const deltaTime = (projectile.body.deltaTime || MATTER_BASE_DELTA) * (projectile.body.timeScale || 1)
@@ -2110,23 +2128,34 @@ class GeneratedGameScene extends Phaser.Scene {
     const gravityScale = typeof gravity.scale === 'number' ? gravity.scale : 0.001
     const gravityStepX = gravity.x * gravityScale * deltaTime * deltaTime
     const gravityStepY = gravity.y * gravityScale * deltaTime * deltaTime
+    const collisionBodies = matterLib.Composite.allBodies(this.matter.world.engine.world).filter(
+      (body) => body !== projectile.body && !body.isSensor,
+    )
+    const probeBody = matterLib.Bodies.circle(projectile.x, projectile.y, projectile.body.circleRadius || SLINGSHOT_PROJECTILE_RADIUS, {
+      isSensor: true,
+    })
     const points: Array<{ x: number; y: number }> = []
     let x = projectile.x
     let y = projectile.y
     let vx = velocity.x
     let vy = velocity.y
 
-    for (let step = 0; step < 32; step += 1) {
+    for (let step = 0; step < 36; step += 1) {
       vx = vx * frictionAir + gravityStepX
       vy = vy * frictionAir + gravityStepY
       x += vx
       y += vy
 
-      if (x < -40 || x > GAME_WIDTH + 40 || y < -20 || y > GAME_HEIGHT - 66) {
+      if (x < -40 || x > GAME_WIDTH + 40 || y < -20 || y > GAME_HEIGHT + 40) {
         break
       }
 
       points.push({ x, y })
+
+      matterLib.Body.setPosition(probeBody, { x, y })
+      if (matterLib.Query.collides(probeBody, collisionBodies).length > 0) {
+        break
+      }
     }
 
     return points
@@ -2143,38 +2172,68 @@ class GeneratedGameScene extends Phaser.Scene {
       this.slingshot.elasticSnap && this.slingshot.projectileLaunched
         ? Phaser.Math.Clamp((this.time.now - this.slingshot.elasticSnap.startedAt) / 320, 0, 1)
         : 1
+    const idlePose = this.getIdleHeroPose()
 
     if (!projectile || this.slingshot.projectileLaunched) {
-      const pose: AstralHeroPose = recoilProgress < 0.78 ? 'release' : 'idle'
+      const pose: AstralHeroPose = recoilProgress < 0.38 ? 'release' : recoilProgress < 0.72 ? 'brace' : idlePose
       this.applyHeroSpritePose(hero, pose)
       hero.setPosition(
-        Phaser.Math.Linear(hero.x, this.slingshot.heroBase.x - (1 - recoilProgress) * 14, 0.2),
-        Phaser.Math.Linear(hero.y, this.slingshot.heroBase.y + Math.sin(this.time.now * 0.012) * 1.4, 0.2),
+        Phaser.Math.Linear(hero.x, this.slingshot.heroBase.x - (1 - recoilProgress) * 8, 0.18),
+        Phaser.Math.Linear(hero.y, this.slingshot.heroBase.y + Math.sin(this.time.now * 0.01) * 1.2, 0.18),
       )
-      hero.setRotation(Phaser.Math.Linear(hero.rotation, recoilProgress < 0.78 ? -0.08 : 0, 0.2))
+      hero.setRotation(Phaser.Math.Linear(hero.rotation, recoilProgress < 0.46 ? -0.035 : 0, 0.18))
       return
     }
 
-    const pullOffsetX = Phaser.Math.Clamp((projectile.x - this.slingshot.anchor.x) * 0.34, -42, 18)
-    const pullOffsetY = Phaser.Math.Clamp((projectile.y - this.slingshot.anchor.y) * 0.12, -10, 14)
+    const pullOffsetX = Phaser.Math.Clamp((projectile.x - this.slingshot.anchor.x) * 0.16, -18, 4)
+    const pullOffsetY = Phaser.Math.Clamp((projectile.y - this.slingshot.anchor.y) * 0.08, -8, 10)
     const pullAmount = Phaser.Math.Clamp(
       Phaser.Math.Distance.Between(projectile.x, projectile.y, this.slingshot.anchor.x, this.slingshot.anchor.y) / SLINGSHOT_MAX_PULL,
       0,
       1,
     )
-    const walking = pullAmount > 0.08 && pullAmount < 0.48
-    const walkPhase = Math.floor(this.time.now / 130) % 2
-    const pose: AstralHeroPose = pullAmount > 0.48 ? 'pull' : walking && walkPhase === 0 ? 'walk' : 'idle'
-    const walkBob = Math.sin(this.time.now * 0.02) * Math.min(5, Math.abs(pullOffsetX) * 0.16)
+    const walking = pullAmount > 0.08 && pullAmount < 0.24
+    const walkPhase = Math.floor(this.time.now / 140) % 2
+    const pose: AstralHeroPose =
+      pullAmount > 0.76
+        ? 'pullHeavy'
+        : pullAmount > 0.46
+          ? 'pullLight'
+          : pullAmount > 0.24
+            ? 'brace'
+            : walking
+              ? walkPhase === 0
+                ? 'stepA'
+                : 'stepB'
+              : idlePose
+    const walkBob = Math.sin(this.time.now * 0.018) * Math.min(4, Math.abs(pullOffsetX) * 0.14)
 
     this.applyHeroSpritePose(hero, pose)
     hero.setPosition(this.slingshot.heroBase.x + pullOffsetX, this.slingshot.heroBase.y + pullOffsetY + walkBob)
-    hero.setRotation(Phaser.Math.Clamp(pullOffsetX * 0.004, -0.13, 0.07))
+    hero.setRotation(Phaser.Math.Clamp(pullOffsetX * 0.0016 + (pullAmount > 0.28 ? -0.012 : 0), -0.05, 0.02))
 
     if (walking && this.time.now - this.slingshot.lastStepAt > 180) {
       this.slingshot.lastStepAt = this.time.now
-      this.emitImpactBurst(hero.x - 6, this.slingshot.heroBase.y - 6, '#d8a65d', 3, 12, 0.28)
+      this.emitImpactBurst(hero.x + 8, this.slingshot.heroBase.y - 6, '#d8a65d', 3, 12, 0.28)
     }
+  }
+
+  private getSlingshotForkPoints(): { top: { x: number; y: number }; bottom: { x: number; y: number } } {
+    if (!this.slingshot) {
+      return {
+        top: { x: 0, y: 0 },
+        bottom: { x: 0, y: 0 },
+      }
+    }
+
+    return {
+      top: { x: this.slingshot.anchor.x + 14, y: this.slingshot.anchor.y - 38 },
+      bottom: { x: this.slingshot.anchor.x + 34, y: this.slingshot.anchor.y - 18 },
+    }
+  }
+
+  private getIdleHeroPose(): AstralHeroPose {
+    return Math.floor(this.time.now / 420) % 2 === 0 ? 'idleA' : 'idleB'
   }
 
   private handleSlingshotCollision(event: Phaser.Physics.Matter.Events.CollisionStartEvent): void {
